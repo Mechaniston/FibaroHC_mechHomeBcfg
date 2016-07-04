@@ -4,7 +4,13 @@
 %% globals
 --]]
 
+
 -- CONSTS
+
+local bFullOpened = 100;
+local bGapOpened  = 50; -- the horizontal orientation after full closed
+local bGapClosed  = 20; -- the up-closed after gap opened
+local bFullClosed = 0;
 
 local moveTime  = 20 * 1000;
 local knockTime = 300;
@@ -13,193 +19,254 @@ local relaxTime = 5 * 1000;
 local blindsMidID = 181;
 local blindsSidesID = 183;
 
+local blindsVDID = 189;
+
 local debugMode = true;
 
 
 -- GET ENVS
 
+fibaro:sleep(50); -- to prevent to kill all instances
+if ( fibaro:countScenes() > 1 ) then
+  if ( debugMode ) then fibaro:debug("Double start"
+    .. "(" .. tostring(fibaro:countScenes()) .. ").. Abort dup!"); end
+  fibaro:abort();
+end
+
+local alignGOarea_Low = (bGapClosed + bGapOpened) / 2;
+local alignGOarea_High = bGapOpened + (bGapOpened - alignGOarea_Low);
+if ( debugMode ) then
+  fibaro:debug("alignGOarea in ("
+    .. tostring(alignGOarea_Low) .. "," .. tostring(alignGOarea_High) .. ")");
+end
+
 ---
 
-local posMid = tonumber(fibaro:getValue(189, "ui.Slider2.value"));
-if debugMode then fibaro:debug("sliderMid = " .. tostring(posMid)); end
+local newMidPos = tonumber(fibaro:getValue(blindsVDID, "ui.Slider2.value"));
+if ( debugMode ) then fibaro:debug("sliderMid = " .. tostring(newMidPos)); end
 
-if posMid > 5 and posMid < 50
-then
-  posMid = 25;
-elseif posMid >= 50
-then
-  posMid = 100;
+if ( (newMidPos > alignGOarea_Low) and (newMidPos < alignGOarea_High) ) then
+  newMidPos = bGapOpened;
+elseif ( newMidPos >= alignGOarea_High ) then
+  newMidPos = bFullOpened;
 else
-  posMid = 0;
-end;
+  newMidPos = bFullClosed;
+end
 
-if debugMode then fibaro:debug("sliderMid aligned = " .. tostring(posMid)); end
+if ( debugMode ) then
+  fibaro:debug("sliderMid aligned = " .. tostring(newMidPos));
+end
 
 local blindsMidPos = tonumber(fibaro:getGlobalValue("blindsMidPos"));
-if debugMode then fibaro:debug("blindsMidPos = " .. tostring(blindsMidPos)); end
+if ( debugMode ) then
+  fibaro:debug("blindsMidPos = " .. tostring(blindsMidPos));
+end
 
 ---
 
-local posSides = tonumber(fibaro:getValue(189, "ui.Slider3.value"));
-if debugMode then fibaro:debug("sliderSides = " .. tostring(posSides)); end
+local newSidPos = tonumber(fibaro:getValue(blindsVDID, "ui.Slider3.value"));
+if ( debugMode ) then
+  fibaro:debug("sliderSides = " .. tostring(newSidPos));
+end
 
-if posSides > 5 and posSides < 50
-then
-  posSides = 25;
-elseif posSides >= 50
-then
-  posSides = 100;
+if ( (newSidPos > alignGOarea_Low) and (newSidPos < alignGOarea_High) ) then
+  newSidPos = bGapOpened;
+elseif ( newSidPos >= alignGOarea_High ) then
+  newSidPos = bFullOpened;
 else
-  posSides = 0;
-end;
+  newSidPos = bFullClosed;
+end
 
-if debugMode then fibaro:debug("sliderSides aligned = " .. tostring(posSides)); end
+if ( debugMode ) then
+  fibaro:debug("sliderSides aligned = " .. tostring(newSidPos));
+end
 
-local blindsSidesPos = tonumber(fibaro:getGlobalValue("blindsSidesPos"));
-if debugMode then fibaro:debug("blindsSidesPos = " .. tostring(blindsSidesPos)); end
+local blindsSidPos = tonumber(fibaro:getGlobalValue("blindsSidPos"));
+if ( debugMode ) then
+  fibaro:debug("blindsSidPos = " .. tostring(blindsSidPos));
+end
 
 ---
 
 
 -- PROCESS
 
-if ((posMid ~= blindsMidPos)
-    	and not((posMid == 0) and (blindsMidPos == 26)))
-  	or ((posSides ~= blindsSidesPos)
-    	and not((posSides == 0) and (blindsSidesPos == 26)))
-then
-  if (posMid ~= blindsMidPos) and not((posMid == 0) and (blindsMidPos == 26))
-  then
-    if debugMode then fibaro:debug("BlindsMid MOVE!"); end
+fibaro:setGlobal("blindsMidPos", newMidPos);
+fibaro:setGlobal("blindsSidPos", newSidPos);
+
+if ( ((newMidPos ~= blindsMidPos)
+    and not((newMidPos == bFullClosed) and (blindsMidPos == bGapClosed)))
+  or ((newSidPos ~= blindsSidPos)
+    and not((newSidPos == bFullClosed) and (blindsSidPos == bGapClosed))) ) then
+  
+  -- start to move, if need
+  
+  if ( (newMidPos ~= blindsMidPos)
+    and not((newMidPos == bFullClosed) and (blindsMidPos == bGapClosed)) ) then
+    
+    if ( debugMode ) then fibaro:debug("BlindsMid MOVE!"); end
     fibaro:call(blindsMidID, "turnOn");
+    
   end
   
-  if (posSides ~= blindsSidesPos) and not((posSides == 0) and (blindsSidesPos == 26))
-  then
-    if debugMode then fibaro:debug("BlindsSides MOVE!"); end
+  if ( (newSidPos ~= blindsSidPos)
+    and not((newSidPos == bFullClosed) and (blindsSidPos == bGapClosed)) ) then
+    
+    if ( debugMode ) then fibaro:debug("BlindsSides MOVE!"); end
     fibaro:call(blindsSidesID, "turnOn");
+    
   end
   
-  if (blindsMidPos == 25 and posMid == 0)
-  	or (blindsMidPos == 0 and posMid == 25)
- 	or (blindsSidesPos == 25 and posSides == 0)
-  	or (blindsSidesPos == 0 and posSides == 25)
-  then
-    if debugMode then fibaro:debug("- knock time"); end
+  -- wait sometime
+  
+  if ( (blindsMidPos == bGapOpened and newMidPos == bFullClosed)
+  	or (blindsMidPos == bFullClosed and newMidPos == bGapOpened)
+ 	or (blindsSidPos == bGapOpened and newSidPos == bFullClosed)
+  	or (blindsSidPos == bFullClosed and newSidPos == bGapOpened) ) then
+    
+    if ( debugMode ) then fibaro:debug("- knock time"); end
     fibaro:sleep(knockTime);
-  elseif not((posMid == 0) and (blindsMidPos == 26))
-    	and not((posSides == 0) and (blindsSidesPos == 26))
-  then
-    if debugMode then fibaro:debug("- move time"); end
+    
+  elseif ( not((newMidPos == bFullClosed) and (blindsMidPos == bGapClosed))
+    and not((newSidPos == bFullClosed) and (blindsSidPos == bGapClosed)) ) then
+    
+    if ( debugMode ) then fibaro:debug("- move time"); end
     fibaro:sleep(moveTime);
+    
   end
   
-  if (blindsMidPos ~= posMid)
-    	and not((blindsMidPos == 26) and (posMid == 0))
-  then
-    if debugMode then fibaro:debug("BlindsMid STOP!"); end
+  -- stop the movement
+  
+  if ( (blindsMidPos ~= newMidPos)
+    and not((blindsMidPos == bGapClosed) and (newMidPos == bFullClosed)) ) then
+    
+    if ( debugMode ) then fibaro:debug("BlindsMid STOP!"); end
     fibaro:call(blindsMidID, "turnOff");
+    
   end
   
-  if (blindsSidesPos ~= posSides)
-    	and not((blindsSidesPos == 26) and (posSides == 0))
-  then
-    if debugMode then fibaro:debug("BlindsSides STOP!"); end
+  if ( (blindsSidPos ~= newSidPos)
+    and not((blindsSidPos == bGapClosed) and (newSidPos == bFullClosed)) ) then
+    
+    if ( debugMode ) then fibaro:debug("BlindsSides STOP!"); end
     fibaro:call(blindsSidesID, "turnOff");
+    
   end
   
-  if (
-      ((blindsMidPos == 26) or (blindsMidPos == 100)) and (posMid == 25)
-    )
- 	or (
-      ((blindsSidesPos == 26) or (blindsSidesPos == 100)) and (posSides == 25)
-    )
-  then
-    if debugMode then fibaro:debug("- relax time"); end
+  -- reverse move, if need
+  
+  local midReverse =
+    ((blindsMidPos == bGapClosed) or (blindsMidPos == bFullOpened))
+    and (newMidPos == bGapOpened);
+  
+  local sidesReverse =
+    ((blindsSidPos == bGapClosed) or (blindsSidPos == bFullOpened))
+    and (newSidPos == bGapOpened);
+  
+  if ( midReverse or sidesReverse ) then
+    
+    if ( debugMode ) then fibaro:debug("- relax time"); end
     fibaro:sleep(relaxTime);
     
-    if ((blindsMidPos == 26) or (blindsMidPos == 100)) and (posMid == 25)
-    then
-      if debugMode then fibaro:debug("BlindsMid MOVE!"); end
+    -- start to move
+    
+    if ( midReverse ) then
+      
+      if ( debugMode ) then fibaro:debug("BlindsMid MOVE!"); end
       fibaro:call(blindsMidID, "turnOn");
+      
     end
         
-    if ((blindsSidesPos == 26) or (blindsSidesPos == 100)) and (posSides == 25)
-    then
-      if debugMode then fibaro:debug("BlindsSides MOVE!"); end
+    if ( sidesReverse ) then
+      if ( debugMode ) then fibaro:debug("BlindsSides MOVE!"); end
       fibaro:call(blindsSidesID, "turnOn");
     end
-  
-    if (blindsMidPos == 100) or (blindsSidesPos == 100) then
-      if debugMode then fibaro:debug("- knock time"); end
+    
+    -- wait some MIN time
+    
+    if ( (blindsMidPos == bFullOpened) or (blindsSidPos == bFullOpened) ) then
+      
+      if ( debugMode ) then fibaro:debug("- knock time"); end
       fibaro:sleep(knockTime);
+      
     else
-      if debugMode then fibaro:debug("- move time"); end
+      
+      if ( debugMode ) then fibaro:debug("- move time"); end
       fibaro:sleep(moveTime);
-    end;
+      
+    end
         
-    if ((blindsMidPos == 26) or (blindsMidPos == 100)) and (posMid == 25)
-    then
-      if debugMode then fibaro:debug("BlindsMid STOP!"); end
+    -- stop the movement
+    
+    if ( midReverse ) then
+      if ( debugMode ) then fibaro:debug("BlindsMid STOP!"); end
       fibaro:call(blindsMidID, "turnOff");
     end
         
-    if ((blindsSidesPos == 26) or (blindsSidesPos == 100)) and (posSides == 25)
-    then
-      if debugMode then fibaro:debug("BlindsSides STOP!"); end
+    if ( sidedReverse ) then
+      if ( debugMode ) then fibaro:debug("BlindsSides STOP!"); end
       fibaro:call(blindsSidesID, "turnOff");
     end
     
-    if (blindsMidPos == 26) or (blindsSidesPos == 26) then
-      if debugMode then fibaro:debug("- relax time"); end
+    -- need to move the rest (only for pos bGapClosed to pos bGapOpened)
+    
+    if ( (blindsMidPos == bGapClosed) or (blindsSidPos == bGapClosed) ) then
+      
+      if ( debugMode ) then fibaro:debug("- relax time"); end
       fibaro:sleep(relaxTime);
     
-      if blindsMidPos == 26
-      then
-        if debugMode then fibaro:debug("BlindsMid MOVE!"); end
+      -- third start to move
+      
+      if ( blindsMidPos == bGapClosed ) then
+        
+        if ( debugMode ) then fibaro:debug("BlindsMid MOVE!"); end
         fibaro:call(blindsMidID, "turnOn");
       end
           
-      if blindsSidesPos == 26
-      then
-        if debugMode then fibaro:debug("BlindsSides MOVE!"); end
+      if ( blindsSidPos == bGapClosed ) then
+        if ( debugMode ) then fibaro:debug("BlindsSides MOVE!"); end
         fibaro:call(blindsSidesID, "turnOn");
       end
-    
-      if debugMode then fibaro:debug("- knock time"); end
+      
+      -- wait min time
+      
+      if ( debugMode ) then fibaro:debug("- knock time"); end
       fibaro:sleep(knockTime);
+      
+      -- final stopping
+      
+      if ( blindsMidPos == bGapClosed ) then
         
-      if blindsMidPos == 26
-      then
-        if debugMode then fibaro:debug("BlindsMid STOP!"); end
+        if ( debugMode ) then fibaro:debug("BlindsMid STOP!"); end
         fibaro:call(blindsMidID, "turnOff");
+        
       end
           
-      if (blindsSidesPos == 26)
-      then
-        if debugMode then fibaro:debug("BlindsSides STOP!"); end
+      if ( blindsSidPos == bGapClosed ) then
+        
+        if ( debugMode ) then fibaro:debug("BlindsSides STOP!"); end
         fibaro:call(blindsSidesID, "turnOff");
+        
       end
+      
     end
+    
   else
-    if blindsMidPos == 25 and posMid == 0
-    then
-      if debugMode then fibaro:debug("SliderMid in 26!"); end
-      posMid = 26;
+    
+    if ( (blindsMidPos == bGapOpened) and (newMidPos == bFullClosed) ) then
+      
+      if ( debugMode ) then fibaro:debug("SliderMid in bGapClosed!"); end
+      newMidPos = bGapClosed;
+      
     end
-    if blindsSidesPos == 25 and posSides == 0
-    then
-      if debugMode then fibaro:debug("SliderSides in 26!"); end
-      posSides = 26;
+    
+    if ( (blindsSidPos == bGapOpened) and (newSidPos == bFullClosed) ) then
+      
+      if debugMode then fibaro:debug("SliderSides in bGapClosed!"); end
+      newSidPos = bGapClosed;
+      
     end
+    
   end
+  
 end
-
-fibaro:setGlobal("blindsMidPos", posMid);
-fibaro:call(189, "setProperty", "ui.Slider2.value", tostring(posMid));
-
-fibaro:setGlobal("blindsSidesPos", posSides);
-fibaro:call(189, "setProperty", "ui.Slider3.value", tostring(posSides));
-
-local pos = math.floor((posMid + posSides) / 2);
-fibaro:call(189, "setProperty", "ui.Slider1.value", tostring(pos));

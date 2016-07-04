@@ -49,7 +49,7 @@ elseif ( (tonumber(door) > 0) and (tonumber(light) > 0)
   
   while ( (tonumber(fibaro:getValue(doorID, "value")) > 0)
     and (tonumber(fibaro:getValue(lightID, "value")) > 0)
-    and (os.time() - startTime <= 3 * 60) ) do
+    and (os.time() - startTime <= 5 * 60) ) do
     
     fibaro:sleep(1500);
     
