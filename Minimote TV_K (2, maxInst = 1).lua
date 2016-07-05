@@ -43,9 +43,7 @@ local HDMIswitch_RT2Kroute = "2";
 local HDMIswitchStateID = 292;
 local HDMIswitchStateOnBtn  = "2";
 local HDMIswitchStateOffBtn = "3";
-local HDMIswitchStatePiPOnBtn = "4";
-local HDMIswitchStatePiPOffBtn = "5";
-local HDMIswitchStateChannelBtnOffset = -1;
+local HDMIswitchStateChannelBtnOffset = -3;
 
 local RTtvID = 274;
 local RTtvPwrBtn 	  = "1";
@@ -61,7 +59,7 @@ local RTtvChDownBtn = "10";
 local RTtvRevBtn 	  = "4"; -- UNUSED yet!!!
 local RTtvPiPBtn 	  = "15"; -- UNUSED yet!!!
 
-local RTtvStateID = 292;
+local RTtvStateID = 293;
 local RTtvStateOnBtn  		  = "2";
 local RTtvStateOffBtn 		  = "3";
 local RTtvStateMenuOffBtn 	= "4";
@@ -84,7 +82,7 @@ function getStrGlobalVal( valName )
   
   if ( debugMode ) then
     
-    fibaro:debug("getStrGlobalVal `" .. valName .. "` = " .. val );
+    fibaro:debug("getStrGlobalVal() `" .. valName .. "` = " .. val );
     
   end
   
@@ -160,6 +158,7 @@ function turnTVon()
     
     if ( debugMode ) then fibaro:debug("> TV Pwr (on)"); end
     fibaro:call(TVID, "pressButton", TVPwrBtn);
+    fibaro:sleep(12000);
     
     if ( TVkitchenLastMode == "" ) then
     
@@ -201,6 +200,7 @@ function turnHDMIon()
     
     if ( debugMode ) then fibaro:debug("> TV HDMI"); end
     fibaro:call(TVID, "pressButton", TVHDMIBtn);
+    fibaro:sleep(2000);
     
   end
   
@@ -285,34 +285,8 @@ function forceHDMIon()
   
 end
 
-function turnHDMI_PiPon()
-  
-  if ( debugMode ) then
-    fibaro:debug("turnHDMI_PiPon() - TVkM: " .. TVkitchenMode
-      .. ", HDMIswM: '" .. HDMIswitchMode .. "'");
-  end
-  
-  turnHDMIon();
-  
-  if ( string.sub(HDMIswitchMode, 3, 3) ~= "1" ) then
-      -- HDMI switch PiP mode ON
-    
-    if ( debugMode ) then fibaro:debug("> HDMIsw PiP (on)"); end
-    fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPBtn);
-    fibaro:call(HDMIswitchStateID, "pressButton",
-      HDMIswitchStatePiPOnBtn);
-    
-    HDMIswitchMode = fibaro:getGlobalValue("HDMIswitchMode"); -- reload
-    
-    return true
-    
-  end
-  
-  return false
-  
-end
-
 function HDMI_NextSecRoute()
+  -- partially code copied to turnHDMI_PiPon()
   
   if ( debugMode ) then
     fibaro:debug("HDMI_NextSecRoute() - HDMIswM: '" .. HDMIswitchMode .. "'");
@@ -323,16 +297,30 @@ function HDMI_NextSecRoute()
     curRoute = 0;
   end
   
-  local btnIdx = tonumber(HDMIswitch21Btn) + curRoute;
-  if ( debugMode ) then fibaro:debug("> HDMIsw 2ndRoute+"); end
+  -- !!! HARDCODE !!!
+  -- 1. The kitchen TV cannot play BluerayDisk Player (#4) :(((
+  -- 2. Last 2ndRroute is unused yet (#6)
+  -- 3. MainMechComp is unused yet too (#3)
+  -- Skip this HDMI switch routes:
+  if ( curRoute == 5 ) then curRoute = 0;
+  elseif ( curRoute == 3 ) then curRoute = 4;
+  elseif ( curRoute == 2 ) then curRoute = 4;
+  end
+  
+  local btnIdx = tonumber(HDMIswitch21Btn) + curRoute; -- auto +1
+  if ( debugMode ) then
+    fibaro:debug("> HDMIsw 2ndRoute++ (" .. tostring(curRoute + 1) .. ")");
+  end
   fibaro:call(HDMIswitchID, "pressButton", tostring(btnIdx));
   
-  local btnStrIdx = tostring(btnIdx + HDMIswitchStateChannelBtnOffset);
-  fibaro:call(HDMIswitchStateID, "pressButton", btnStrIdx);
+  local btnStateStrIdx = tostring(btnIdx + HDMIswitchStateChannelBtnOffset);
+  fibaro:call(HDMIswitchStateID, "pressButton", btnStateStrIdx);
   
   if ( debugMode ) then 
-    fibaro:debug("HDMIswStateVDcallBtnIdx = " .. btnStrIdx);
+    fibaro:debug("HDMIswStateVDcallBtnIdx = " .. btnStateStrIdx);
   end
+  
+  HDMIswitchMode = fibaro:getGlobalValue("HDMIswitchMode"); -- reload
   
   if ( tostring(curRoute + 1) == HDMIswitch_RT2Kroute ) then -- switched to RT
     return turnHDMI_RTon();
@@ -351,6 +339,8 @@ function turnTVOff()
     if ( debugMode ) then fibaro:debug("> TV Pwr (off)"); end
     fibaro:call(TVID, "pressButton", TVPwrBtn);
     
+    turnHDMIoff();
+    --[[
     if ( string.sub(HDMIswitchMode, 4, 4) == "1" ) then
       
       if ( (string.sub(RTtvMode, 2, 2) == "1")
@@ -358,26 +348,26 @@ function turnTVOff()
         
         turnHDMI_RToff();
         
-        if ( debugMode ) then fibaro:debug("* Set TVkLM to HDMI_RT"); end
-        fibaro:setGlobal("TVkitchenLastMode", "HDMI_RT");
-        
-      else
-        
-        if ( debugMode ) then fibaro:debug("* Set TVkLM to HDMI_Other"); end
-        fibaro:setGlobal("TVkitchenLastMode", "HDMI_Other");
+      --  if ( debugMode ) then fibaro:debug("* Set TVkLM to HDMI_RT"); end
+      --  fibaro:setGlobal("TVkitchenLastMode", "HDMI_RT");
+      --  
+      --else
+      --  
+      --  if ( debugMode ) then fibaro:debug("* Set TVkLM to HDMI_Other"); end
+      --  fibaro:setGlobal("TVkitchenLastMode", "HDMI_Other");
         
       end
       
       turnHDMIoff();
       
-    else
+    --else
+    --  
+    --  if ( debugMode ) then fibaro:debug("* Set TVkLM to TV"); end
+    --  fibaro:setGlobal("TVkitchenLastMode", "TV");
       
-      if ( debugMode ) then fibaro:debug("* Set TVkLM to TV"); end
-      fibaro:setGlobal("TVkitchenLastMode", "TV");
-      
-    end
+    end--]]
     
-    setTVkModes("", true);
+    setTVkModes("*", false);
     
     return true
     
@@ -392,10 +382,10 @@ function turnTVOff()
   
 end
 
-function turnHDMIOff()
+function turnHDMIoff()
   
   if ( debugMode ) then
-    fibaro:debug("turnHDMIOff() - TVkM: " .. TVkitchenMode
+    fibaro:debug("turnHDMIoff() - TVkM: " .. TVkitchenMode
       .. ", HDMIswM: '" .. HDMIswitchMode .. "'");
   end
   
@@ -416,8 +406,6 @@ function turnHDMIOff()
     if ( debugMode ) then fibaro:debug("> HDMIsw Pwr (off)"); end
     fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPwrBtn);
     fibaro:call(HDMIswitchStateID, "pressButton", HDMIswitchStateOffBtn);
-    fibaro:call(HDMIswitchStateID, "pressButton",
-      HDMIswitchStatePiPOffBtn);
     
     HDMIswitchMode = fibaro:getGlobalValue("HDMIswitchMode"); -- reload
     
@@ -455,22 +443,155 @@ function turnHDMI_RToff()
   
 end
 
+end
+
+function calcNextPiProute()
+  
+  if ( debugMode ) then
+    fibaro:debug("calcNextPiProute() - HDMIswM: '" .. HDMIswitchMode .. "'");
+  end
+  
+  local route1 = string.sub(HDMIswitchMode, 1, 1);
+  local route2 = string.sub(HDMIswitchMode, 2, 2);
+  local newPiProute = 0;
+  
+  if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) == 0 ) then
+    
+    newPiProute = tonumber(route1) + 1;
+    
+  else
+    
+    newPiProute = tonumber(string.sub(HDMIswitchMode, 3, 3)) + 1;
+    
+  end
+  
+  -- !!! HARDCODE !!! skip BDpl
+  if ( newPiProute == 4 ) then
+    newPiProute = newPiProute + 1;
+    
+    if ( debugMode ) then fibaro:debug("> HDMIsw PiP sel"); end
+    fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPSelBtn);
+  end
+  
+  -- skip cur route
+  if ( newPiProute == route2) then newPiProute = newPiProute + 1; end
+  
+  -- !!! HARDCODE !!! skip unsed route
+  if ( newPiProute > 5 ) then
+    newPiProute = 1;
+    
+    if ( debugMode ) then fibaro:debug("> HDMIsw PiP sel"); end
+    fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPSelBtn);
+  end
+  
+  -- cycling (max route count = 6)
+  if ( newPiProute > 6 ) then newPiProute = 1; end
+  
+  HDMIswitchMode = route1 .. route2 .. tostring(newPiProute) .. "1";
+  fibaro:setGlobal("HDMIswitchMode", HDMIswitchMode);
+  
+  if ( debugMode ) then
+    fibaro:debug("calcNextPiProute() - newHDMIswM: '"
+      .. HDMIswitchMode .. "'");
+  end
+  
+  return newPiProute;
+  
+end
+
+function turnHDMI_PiPon()
+  
+  if ( debugMode ) then
+    fibaro:debug("turnHDMI_PiPon() - HDMIswM: '" .. HDMIswitchMode .. "'");
+  end
+  
+  --turnHDMIon();
+  
+  if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) == 0 ) then
+    -- HDMI switch PiP mode ON
+    
+    -- WARNING! The turning on the PiP mode setted 2nd ch. equal 1st
+    -- Solution: 1. save (don't correct 2nd route in HDMIswMode)
+    -- 2. set 1st route as 2nd in PiP on (current select)
+    --   and restore in PiPoff
+    -- TODO: autoselect depending TVsets on
+    --  (note: in current (PiPon) moment => need to save)
+    
+    -- 2nd solution (partially code copied from HDMI_NextSecRoute())
+    local curHDMIswitchMode = HDMIswitchMode;
+    local route1 = string.sub(HDMIswitchMode, 1, 1);
+    local route2 = string.sub(HDMIswitchMode, 2, 2);
+    local btnIdx = tonumber(HDMIswitch11Btn) + tonumber(route2) - 1;
+    
+    if ( debugMode ) then
+      fibaro:debug("> HDMIsw 1stRoute = " .. route2);
+    end
+    fibaro:call(HDMIswitchID, "pressButton", tostring(btnIdx));
+    fibaro:sleep(4000);
+    
+    local btnStrIdx = tostring(btnIdx + HDMIswitchStateChannelBtnOffset);
+    HDMIswitchMode = route2 .. route2 .. route2 .. "1";
+    
+    if ( debugMode ) then fibaro:debug("> HDMIsw PiP (on)"); end
+    fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPBtn);
+    
+    local newPiProute = calcNextPiProute();
+    
+    -- 2nd solution - save 1st route
+    HDMIswitchMode = route1 .. route2 .. newPiProute .. "1";
+    fibaro:setGlobal("HDMIswitchMode", HDMIswitchMode);
+    
+    if ( debugMode ) then
+      fibaro:debug("turnHDMI_PiPon() - newHDMIswM: '" .. HDMIswitchMode .. "'");
+    end
+    
+    return true
+    
+  end
+  
+  return false
+  
+end
+
 function turnHDMI_PiPoff()
   
   if ( debugMode ) then
-    fibaro:debug("turnHDMI_PiPoff() - TVkM: " .. TVkitchenMode
-      .. ", HDMIswM: '" .. HDMIswitchMode .. "'");
+    fibaro:debug("turnHDMI_PiPoff() - HDMIswM: '" .. HDMIswitchMode .. "'");
   end
   
-  if ( string.sub(HDMIswitchMode, 3, 3) == "1" ) then
+  if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then
     -- HDMI switch PiP mode OFF
     
-    if ( debugMode ) then fibaro:debug("> HDMIsw PiP (off)"); end
-    fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPBtn);
-    fibaro:call(HDMIswitchStateID, "pressButton",
-      HDMIswitchStatePiPOffBtn);
+    -- restore route
+    local route1 = string.sub(HDMIswitchMode, 1, 1);
+    local route2 = string.sub(HDMIswitchMode, 2, 2);
+    -- 1st solution (see to turnHDMI_PiPon()) - restore 2nd route
+    --[[if ( debugMode ) then
+      fibaro:debug("> HDMIsw 2stRoute = " .. route2);
+    end
+
+    fibaro:call(HDMIswitchID, "pressButton",
+      tostring(tonumber(HDMIswitch21Btn) + tonumber(route2) - 1)
+      );
+    --]]
+    -- 2nd solution - restore 1st route
+    if ( debugMode ) then
+      fibaro:debug("> HDMIsw 1stRoute = " .. route1);
+    end
+    fibaro:call(HDMIswitchID, "pressButton",
+      tostring(tonumber(HDMIswitch11Btn) + tonumber(route1) - 1)
+      );
     
-    HDMIswitchMode = fibaro:getGlobalValue("HDMIswitchMode"); -- reload
+    if ( debugMode ) then fibaro:debug("> HDMIsw PiP (off)"); end
+    --auto because routes changed
+    --fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPBtn);
+    
+    HDMIswitchMode = route1 .. route2 .. "01";
+    fibaro:setGlobal("HDMIswitchMode", HDMIswitchMode);
+    
+    if ( debugMode ) then
+      fibaro:debug("turnHDMI_PiPoff() - newHDMIswM: '" .. HDMIswitchMode .. "'");
+    end
     
     return true
     
@@ -483,19 +604,35 @@ end
 function turnHDMI_PiPent()
   
   if ( debugMode ) then
-    fibaro:debug("turnHDMI_PiPent() - TVkM: " .. TVkitchenMode
-      .. ", HDMIswM: '" .. HDMIswitchMode .. "'");
+    fibaro:debug("turnHDMI_PiPent() - HDMIswM: '" .. HDMIswitchMode .. "'");
   end
   
-  if ( string.sub(HDMIswitchMode, 3, 3) == "1" ) then
+  local curPiProute = string.sub(HDMIswitchMode, 3, 3);
+  
+  if ( tonumber(curPiProute) > 0 ) then
     -- HDMI switch PiP ENTER
     
     if ( debugMode ) then fibaro:debug("> HDMIsw PiP ent"); end
     fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPEntBtn);
-    fibaro:call(HDMIswitchStateID, "pressButton",
-      HDMIswitchStatePiPOffBtn); -- auto-off
+    fibaro:sleep(4000);
     
-    HDMIswitchMode = fibaro:getGlobalValue("HDMIswitchMode"); -- reload
+    -- restore route
+    local route1 = string.sub(HDMIswitchMode, 1, 1);
+    -- 1st solution (see to turnHDMI_PiPon()) - no need action
+    -- 2nd solution
+    if ( debugMode ) then
+      fibaro:debug("> HDMIsw 1stRoute = " .. route1);
+    end
+    fibaro:call(HDMIswitchID, "pressButton",
+      tostring(tonumber(HDMIswitch11Btn) + tonumber(route1) - 1)
+      );
+    
+    HDMIswitchMode = route1 .. curPiProute .. "01";
+    fibaro:setGlobal("HDMIswitchMode", HDMIswitchMode);
+    
+    if ( debugMode ) then
+      fibaro:debug("turnHDMI_PiPent() - newHDMIswM: '" .. HDMIswitchMode .. "'");
+    end
     
     return true
     
@@ -525,6 +662,8 @@ if ( turnTVon() ) then
     
   end
   
+  return
+  
 end
 
 -- Key pressing
@@ -533,10 +672,12 @@ if ( tonumber(buttonPressed) == 1) then ---------------------------------------
   if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
     and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
     
-    if ( string.sub(HDMIswitchMode, 3, 3) == "1" ) then -- PiP on
+    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
       
       if ( debugMode ) then fibaro:debug("> HDMIsw PiP sel"); end
       fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPSelBtn);
+      
+      calcNextPiProute();
       
     else
       
@@ -549,24 +690,22 @@ if ( tonumber(buttonPressed) == 1) then ---------------------------------------
         if ( string.sub(RTtvMode, 1, 1) == "1" ) then -- RT.Menu normal
         
           if ( debugMode ) then
-            fibaro:debug("> RT.TV OK (norm. menu enter)");
+            fibaro:debug("> RT.TV OK (norm. menu)");
           end
           fibaro:call(RTtvID, "pressButton", RTtvOKBtn);
           
         elseif ( string.sub(RTtvMode, 1, 1) == "2" ) then -- RT.Menu OK
           
           if ( debugMode ) then
-            fibaro:debug("> RT.TV up (OK menu up)");
+            fibaro:debug("> RT.TV up (OK menu)");
           end
           fibaro:call(RTtvID, "pressButton", RTtvUpBtn);
           
         else
           
-          if ( debugMode ) then
-            fibaro:debug("> RT.TV ChUp (OK menu top)");
-          end
+          if ( debugMode ) then fibaro:debug("> RT.TV ChUp"); end
           fibaro:call(RTtvID, "pressButton", RTtvChUpBtn);
-        
+          
         end
     
       elseif ( TVkitchenMode == "HDMI_Other" ) then
@@ -585,8 +724,38 @@ if ( tonumber(buttonPressed) == 1) then ---------------------------------------
     
     if ( TVkitchenMode == "TVMenu" ) then
       
-      if ( debugMode ) then fibaro:debug("> TV OK (TV menu)"); end
-      fibaro:call(TVID, "pressButton", TVOKBtn);
+      if ( (TVkitchenLastMode == "HDMI_RT")
+        and (string.sub(HDMIswitchMode, 2, 2) == HDMIswitch_RT2Kroute)
+        and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
+        
+        if ( string.sub(RTtvMode, 1, 1) ~= "1" ) then -- RT.Menu normal
+          -- exit from RT.TV Menu normal mode
+          
+          if ( debugMode ) then
+            fibaro:debug("> RT.TV Menu (exit from normal)");
+          end
+          fibaro:call(RTtvID, "pressButton", RTtvRevBtn);
+          fibaro:call(RTtvStateID, "pressButton", RTtvStateMenuOffBtn);
+          
+        else
+          -- set RT.TV Menu normal mode
+          
+          if ( debugMode ) then
+            fibaro:debug("> RT.TV Menu (enter to normal)");
+          end
+          fibaro:call(RTtvID, "pressButton", RTtvMenuBtn);
+          fibaro:call(RTtvStateID, "pressButton", RTtvStateMenuNormBtn);
+          
+          setTVkModes(TVkitchenLastMode, false);
+          
+        end
+        
+      else
+      
+        if ( debugMode ) then fibaro:debug("> TV OK (TV menu)"); end
+        fibaro:call(TVID, "pressButton", TVOKBtn);
+        
+      end
       
     elseif ( TVkitchenMode == "Ext" ) then
       
@@ -615,10 +784,12 @@ elseif ( tonumber(buttonPressed) == 2) then -----------------------------------
   if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
     and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
     
-    if ( string.sub(HDMIswitchMode, 3, 3) == "1" ) then -- PiP on
+    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
       
       if ( debugMode ) then fibaro:debug("> HDMIsw PiP sel"); end
       fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPSelBtn);
+      
+      calcNextPiProute();
       
     else
       
@@ -626,13 +797,14 @@ elseif ( tonumber(buttonPressed) == 2) then -----------------------------------
         
         if ( string.sub(RTtvMode, 1, 1) == "1" ) then -- RT.Menu normal
           
-          if ( debugMode ) then fibaro:debug("> RT.TV ChUp"); end
-          fibaro:call(RTtvID, "pressButton", RTtvChUpBtn); -- ???
+          
           
         elseif ( string.sub(RTtvMode, 1, 1) == "2" ) then -- RT.Menu OK
           
-          if ( debugMode ) then fibaro:debug("> RT.TV ChUp"); end
-          fibaro:call(RTtvID, "pressButton", RTtvChUpBtn); -- begin of list
+          if ( debugMode ) then
+            fibaro:debug("> RT.TV ChUp (OK menu page up)");
+          end
+          fibaro:call(RTtvID, "pressButton", RTtvChUpBtn);
           
         else
           -- force set Ext mode
@@ -681,36 +853,31 @@ elseif ( tonumber(buttonPressed) == 3) then -----------------------------------
   if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
     and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
     
-    if ( string.sub(HDMIswitchMode, 3, 3) == "1" ) then -- PiP on
+    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
       
-      turnHDMI_PiPent();
+      turnHDMI_PiPoff();
       
     else
       
       if ( TVkitchenMode == "HDMI" ) then
         -- HDMI -> TV
         
-        if ( string.sub(RTtvMode, 2, 2) == "1" ) then
-          
-          turnHDMI_RToff();
-          
-        else
-          
-          turnHDMIoff();
-          
-        end
+        turnHDMIoff();
         
       elseif ( TVkitchenMode == "HDMI_RT" ) then
         
         if ( string.sub(RTtvMode, 1, 1) == "1" ) then -- RT.Menu normal
           
-          if ( debugMode ) then fibaro:debug("> RT.TV Back"); end
+          if ( debugMode ) then
+            fibaro:debug("> RT.TV Back (norm. menu)");
+          end
           fibaro:call(RTtvID, "pressButton", RTtvBackBtn);
           
         elseif ( string.sub(RTtvMode, 1, 1) == "2" ) then -- RT.Menu OK
+          -- exit from RT.TV Menu OK mode
           
           if ( debugMode ) then
-            fibaro:debug("> RT.TV Menu (OK mode end and select)");
+            fibaro:debug("> RT.TV OK (OK menu mode end with select)");
           end
           fibaro:call(RTtvID, "pressButton", RTtvOKBtn);
           fibaro:call(RTtvStateID, "pressButton", RTtvStateMenuOffBtn);
@@ -742,8 +909,29 @@ elseif ( tonumber(buttonPressed) == 3) then -----------------------------------
       
     elseif ( TVkitchenMode == "TVMenu" ) then
       
-      if ( debugMode ) then fibaro:debug("> TV Back"); end
-      fibaro:call(TVID, "pressButton", TVBackBtn);
+      if ( (TVkitchenLastMode == "HDMI_RT")
+        and (string.sub(HDMIswitchMode, 2, 2) == HDMIswitch_RT2Kroute)
+        and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
+        
+        if ( string.sub(RTtvMode, 1, 1) ~= "2" ) then -- RT.Menu OK
+          -- start RT.TV Menu OK mode
+          
+          if ( debugMode ) then
+            fibaro:debug("> RT.TV OK (OK menu mode begin)");
+          end
+          fibaro:call(RTtvID, "pressButton", RTtvOKBtn);
+          fibaro:call(RTtvStateID, "pressButton", RTtvStateMenuOKBtn);
+          
+          setTVkModes(TVkitchenLastMode, false);
+          
+        end
+        
+      else
+      
+        if ( debugMode ) then fibaro:debug("> TV Back"); end
+        fibaro:call(TVID, "pressButton", TVBackBtn);
+        
+      end
       
     elseif ( TVkitchenMode == "Ext" ) then
       -- turn TV and other Off
@@ -773,20 +961,26 @@ elseif ( tonumber(buttonPressed) == 4) then -----------------------------------
   if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
     and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
     
-    if ( string.sub(HDMIswitchMode, 3, 3) == "1" ) then -- PiP on
+    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
       
-      turnHDMI_PiPent();
+      turnHDMI_PiPoff();
       
     else
       
-      --if ( TVkitchenMode == "HDMI" ) then
-      --elseif ( TVkitchenMode == "HDMI_RT" ) then
-      --elseif ( TVkitchenMode == "HDMI_Other" ) then
-      --end
-      
-      -- exit from HDMI mode
-      
-      setTVkModes(TVkitchenLastMode, false);
+      if ( TVkitchenMode == "HDMI" ) then
+        -- exit from HDMI mode
+        
+        setTVkModes(TVkitchenLastMode, false);
+        
+      elseif ( TVkitchenMode == "HDMI_RT" ) then
+        
+        setTVkModes("*HDMI", false);
+        
+      elseif ( TVkitchenMode == "HDMI_Other" ) then
+        
+        setTVkModes("*HDMI", false);
+        
+      end
       
     end
     
@@ -795,30 +989,26 @@ elseif ( tonumber(buttonPressed) == 4) then -----------------------------------
     if ( TVkitchenMode == "TVMenu" ) then
       -- force set HDMI mode
       
-      setTVkModes("*HDMI", false);
-      
       forceHDMIon();
+      setTVkModes("*HDMI", false);
       
     elseif ( TVkitchenMode == "Ext" ) then
       -- force set HDMI mode
       
-      setTVkModes("*HDMI", false);
-      
       forceHDMIon();
+      setTVkModes("*HDMI", false);
       
     elseif ( TVkitchenMode == "ProgNum" ) then
       -- force set HDMI mode
       
-      setTVkModes("*HDMI", false);
-      
       forceHDMIon();
+      setTVkModes("*HDMI", false);
       
     else -- TV
       -- set HDMI mode
       
-      setTVkModes("HDMI", true);
-      
       forceHDMIon();
+      setTVkModes("HDMI", true);
       
     end
     
@@ -829,9 +1019,9 @@ elseif ( tonumber(buttonPressed) == 5) then -----------------------------------
   if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
     and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
     
-    if ( string.sub(HDMIswitchMode, 3, 3) == "1" ) then -- PiP on
+    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
       
-      turnHDMI_PiPoff();
+      turnHDMI_PiPent();
       
     else
       
@@ -843,28 +1033,23 @@ elseif ( tonumber(buttonPressed) == 5) then -----------------------------------
         
         if ( string.sub(RTtvMode, 1, 1) == "1" ) then -- RT.Menu normal
           
-          if ( debugMode ) then fibaro:debug("> RT.TV Left"); end
+          if ( debugMode ) then
+            fibaro:debug("> RT.TV Left (norm. menu)");
+          end
           fibaro:call(RTtvID, "pressButton", RTtvLeftBtn);
           
         elseif ( string.sub(RTtvMode, 1, 1) == "2" ) then -- RT.Menu OK
           
-          if ( debugMode ) then fibaro:debug("> RT.TV Down"); end
-          fibaro:call(RTtvID, "pressButton", RTtvDownBtn);
-          
-        elseif ( TVkitchenMode == "TVMenu" ) then
-          -- set RT TVMenu normal mode
-          
           if ( debugMode ) then
-            fibaro:debug("> RT.TV Menu (OK mode begin)");
+            fibaro:debug("> RT.TV Down (OK menu)");
           end
-          fibaro:call(RTtvID, "pressButton", RTtvOKBtn);
-          fibaro:call(RTtvStateID, "pressButton", RTtvStateMenuOKBtn);
+          fibaro:call(RTtvID, "pressButton", RTtvDownBtn);
           
         else
           
           if ( debugMode ) then fibaro:debug("> RT.TV ChDown"); end
           fibaro:call(RTtvID, "pressButton", RTtvChDownBtn);
-        
+          
         end
         
       elseif ( TVkitchenMode == "HDMI_Other" ) then
@@ -913,9 +1098,9 @@ elseif ( tonumber(buttonPressed) == 6) then -----------------------------------
   if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
     and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
     
-    if ( string.sub(HDMIswitchMode, 3, 3) == "1" ) then -- PiP on
+    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
       
-      turnHDMI_PiPoff();
+      turnHDMI_PiPent();
       
     else
       
@@ -966,7 +1151,7 @@ elseif ( tonumber(buttonPressed) == 7) then -----------------------------------
   if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
     and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
     
-    if ( string.sub(HDMIswitchMode, 3, 3) == "1" ) then -- PiP on
+    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
       
       turnHDMI_PiPoff();
       
@@ -980,13 +1165,19 @@ elseif ( tonumber(buttonPressed) == 7) then -----------------------------------
         
         if ( string.sub(RTtvMode, 1, 1) == "1" ) then -- RT.Menu normal
           
-          if ( debugMode ) then fibaro:debug("> RT.TV Right"); end
+          if ( debugMode ) then
+            fibaro:debug("> RT.TV Right (norm. menu)");
+          end
           fibaro:call(RTtvID, "pressButton", RTtvRightBtn);
           
         elseif ( string.sub(RTtvMode, 1, 1) == "2" ) then -- RT.Menu OK
+          -- exit from RT.TV Menu OK mode
           
-          if ( debugMode ) then fibaro:debug("> RT.TV OK"); end
+          if ( debugMode ) then
+            fibaro:debug("> RT.TV OK (OK menu mode end with select)");
+          end
           fibaro:call(RTtvID, "pressButton", RTtvOKBtn);
+          fibaro:call(RTtvStateID, "pressButton", RTtvStateMenuOffBtn);
           
         else
           
@@ -997,33 +1188,14 @@ elseif ( tonumber(buttonPressed) == 7) then -----------------------------------
         
       elseif ( TVkitchenMode == "HDMI_Other" ) then
         
-      elseif ( TVkitchenMode == "TVMenu" ) then
-        
-        if ( string.sub(RTtvMode, 1, 1) == "1" ) then -- RT.Menu normal
-          -- set RT TVMenu normal mode
-          
-          if ( debugMode ) then
-            fibaro:debug("> RT.TV Menu (exit from normal)");
-          end
-          fibaro:call(RTtvID, "pressButton", RTtvMenuBtn);
-          fibaro:call(RTtvStateID, "pressButton", RTtvStateMenuOffBtn);
-          
-        else
-          -- set RT TVMenu normal mode
-          
-          if ( debugMode ) then
-            fibaro:debug("> RT.TV Menu (enter to normal)");
-          end
-          fibaro:call(RTtvID, "pressButton", RTtvMenuBtn);
-          fibaro:call(RTtvStateID, "pressButton", RTtvStateMenuNormBtn);
-          
-        end
+        if ( debugMode ) then fibaro:debug("> TV VolDn"); end
+        fibaro:call(TVID, "pressButton", TVVolDnBtn);
         
       else
         
         if ( debugMode ) then fibaro:debug("> TV VolDn"); end
         fibaro:call(TVID, "pressButton", TVVolDnBtn);
-
+        
       end
       
     end
@@ -1032,8 +1204,12 @@ elseif ( tonumber(buttonPressed) == 7) then -----------------------------------
     
     if ( TVkitchenMode == "TVMenu" ) then
       
-      if ( debugMode ) then fibaro:debug("> TV Right"); end
-      fibaro:call(TVID, "pressButton", TVRightBtn);
+      if ( TVkitchenMode == "TVMenu" ) then
+        
+        if ( debugMode ) then fibaro:debug("> TV Right"); end
+        fibaro:call(TVID, "pressButton", TVRightBtn);
+        
+      end
       
     elseif ( TVkitchenMode == "Ext" ) then
       
@@ -1063,7 +1239,7 @@ elseif ( tonumber(buttonPressed) == 8) then -----------------------------------
   if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
     and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
     
-    if ( string.sub(HDMIswitchMode, 3, 3) == "1" ) then -- PiP on
+    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
       
       turnHDMI_PiPoff();
       
@@ -1083,13 +1259,13 @@ elseif ( tonumber(buttonPressed) == 8) then -----------------------------------
           
         else
           
-          
+          setTVkModes("*TVMenu", false);
           
         end
         
       else
         
-        
+        setTVkModes("*TVMenu", false);
         
       end
       

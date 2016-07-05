@@ -20,9 +20,9 @@ local debugMode = true;
 -- GET ENVS --
 
 --[[fibaro:sleep(50); -- to prevent to kill all instances
-if ( fibaro:countScenes() > 1 )
-  then
-  if ( debugMode ) then fibaro:debug("Double start.. Abort dup!"); end
+if ( fibaro:countScenes() > 1 ) then
+  if ( debugMode ) then fibaro:debug("Double start"
+    .. "(" .. tostring(fibaro:countScenes()) .. ").. Abort dup!"); end
   fibaro:abort();
 end--]]
 

@@ -4,7 +4,7 @@
 %% globals
 --]]
 
-local debugMode = true;
+local debugMode = false;
 local debugModeDetail = false;
 
 -----
@@ -17,14 +17,16 @@ if ( fibaro:getSourceTrigger()["type"] == "other" ) then
   end
 end
 
-fibaro:sleep(50); -- to prevent kill all instances
+fibaro:sleep(50); -- to prevent to kill all instances
 if ( fibaro:countScenes() > 1 ) then
-  if ( debugMode ) then fibaro:debug("Dublicate call! Abort!"); end
+  if ( debugMode ) then fibaro:debug("Double start"
+    .. "(" .. tostring(fibaro:countScenes()) .. ").. Abort dup!"); end
   fibaro:abort();
 end
 
 while true do
-  --if (math.floor(os.time() / 60) - math.floor(1438635600 / 60)) % 5 == 0 -- every 5 minute
+  --if (math.floor(os.time() / 60) - math.floor(1438635600 / 60)) % 5 == 0
+  -- every 5 minute
   
   local offsetHour = 1;
   

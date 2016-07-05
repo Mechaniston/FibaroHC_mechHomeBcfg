@@ -1,4 +1,4 @@
-Ôªø--[[
+--[[
 %% properties
 201 sceneActivation
 %% globals
@@ -44,19 +44,18 @@ local btnScnActRelease   = 13; -- momentary switch only
 
 local btnKind_OneTwo     =  0; -- use 0 for FIRST channel or 10 for SECOND channel
 
+
 local debugMode = false;
 
 
 -- GET ENVS --
 
---[[
 fibaro:sleep(50); -- to prevent to kill all instances
-if ( fibaro:countScenes() > 1 )
-  then
-  if ( debugMode ) then fibaro:debug("Double start.. Abort dup!"); end
+if ( fibaro:countScenes() > 1 ) then
+  if ( debugMode ) then fibaro:debug("Double start"
+    .. "(" .. tostring(fibaro:countScenes()) .. ").. Abort dup!"); end
   fibaro:abort();
 end
---]]
 
 local scrTrigger = fibaro:getSourceTrigger();
 
@@ -150,9 +149,9 @@ elseif ( sceneActID == btnScnActDblClick + btnKind_OneTwo ) then ---------------
     fibaro:debug("val1 = ".. val1 .. ", val2 = " .. val2);
   end
   
-  if ( (DT2 > DT1) and (os.time() - DT2 < 6) ) then -- –ö_–• light was switched during last 5 sec
+  if ( (DT2 > DT1) and (os.time() - DT2 < 6) ) then --  _’ light was switched during last 5 sec
   --]]
-    -- change –ö_–• lights
+    -- change  _’ lights
     
     if ( lightKitchen > 0 ) then
       
@@ -189,7 +188,7 @@ elseif ( sceneActID == btnScnActDblClick + btnKind_OneTwo ) then ---------------
       
     end
     
-  else -- change –ë–ö lights
+  else -- change ¡  lights
     
     if ( (lightBed == 0) and bedIsDown ) then
       
