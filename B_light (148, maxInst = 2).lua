@@ -1,7 +1,7 @@
 --[[
 %% properties
 36 value
-284 value
+307 value
 %% globals
 --]]
 
@@ -17,7 +17,7 @@ In "VarMode" (armedMode == false) you need have the global var!
 -- CONSTS
 
 -- Devices ID's
-local doorID = 284;
+local doorID = 307;
 local lightID = 36;
 
 -- Time to enter (in sec), longer time will detect as another situation, like cleaning
@@ -71,7 +71,7 @@ function setFlag(flag)
     
     if ( debugMode ) then
       local isArmed, isArmedMT = fibaro:get(doorID, "armed");
-      fibaro:debug("Set <armed> status for door sensor in <" .. flag .. "> (value = " .. isArmed .. ", MT = " .. isArmedMT .. ")");
+      fibaro:debug("Set <armed> status for bathroom door sensor in <" .. flag .. "> (value = " .. isArmed .. ", MT = " .. isArmedMT .. ")");
     end
     
   else
@@ -179,13 +179,13 @@ elseif ( trigger['type'] == "property" ) then
         
       end
       
-      if ( debugMode ) then fibaro:debug('The light manual off..'); end
+      if ( debugMode ) then fibaro:debug('Light manual off!'); end
         
     elseif ( light == "1" ) then
       
       setFlag("1");
       
-      if ( debugMode ) then fibaro:debug('The light manual on, arming..'); end
+      if ( debugMode ) then fibaro:debug('Light manual on, arming...'); end
       
     end
     

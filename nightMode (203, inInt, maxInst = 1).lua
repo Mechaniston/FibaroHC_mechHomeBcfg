@@ -4,7 +4,7 @@
 nightMode
 --]]
 
-
+--[[
 --if ( fibaro:getSourceTrigger()["type"] == "other" ) then
   if ( fibaro:getGlobalValue("nightMode") == "1" )
     fibaro:setGlobal("nightMode", "0");
@@ -12,6 +12,7 @@ nightMode
 	fibaro:setGlobal("nightMode", "1");
   end
 --end
+--]]
 
 if ( fibaro:getGlobalValue("nightMode") == "1" ) then
   
@@ -44,6 +45,7 @@ if ( fibaro:getGlobalValue("nightMode") == "1" ) then
   end
   
   if ( fibaro:getGlobalValue("nightMode_skipBR") ~= "1" ) then
+    
     fibaro:call(228, "turnOff"); 	-- БК:УпрРозетка
     fibaro:call(230, "turnOff"); 	-- БК:Бра
     fibaro:call(169, "turnOff"); 	-- БК:СветДоп
@@ -57,18 +59,28 @@ if ( fibaro:getGlobalValue("nightMode") == "1" ) then
     fibaro:call(179, "turnOff"); 	-- БК:Вентиляция
     
     if ( (ventValue ~= "0") or (bedPlugValue ~= "0") ) then
+      
+      fibaro:debug("turn OFF BRvent or BRbedPlug");
+      
       setTimeout(
         function()
+          
           if ( ventValue ~= "0" ) then
             fibaro:call(179, "turnOn"); -- БК:Вентиляция
           end
+          
           if ( (bedPlugValue ~= "0")
             and (fibaro:getValue(205, "value") == "1") ) then -- bed is down
             fibaro:call(15, "turnOn"); 	-- БК:РозеткиКровати
           end
+          
+          fibaro:debug("Turn back vent/BRbedPlug");
+          
         end,
         2 * 60 * 60 * 1000); -- 2 hour
+      
     end
+    
   else
     fibaro:setGlobal("nightMode_skipBR", "0");
   end
@@ -79,9 +91,12 @@ if ( fibaro:getGlobalValue("nightMode") == "1" ) then
   fibaro:call(12, "turnOff"); -- Т_В:Вентиляция
   fibaro:call(17, "turnOff"); -- БК:РозеткиКровати_2
   --]]
+  
 else
-  fibaro:call(177, "turnOn");	-- Лоджия
+  
+  --fibaro:call(177, "turnOn");	-- Лоджия
   fibaro:call(60, "turnOn");	-- Кухня:Приборы(туалет)
+  
 end
 
 fibaro:debug("nightMode = " .. fibaro:getGlobalValue("nightMode"));

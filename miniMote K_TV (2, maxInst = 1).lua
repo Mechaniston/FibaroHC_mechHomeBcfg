@@ -9,15 +9,25 @@
 -- CONSTS
 
 local TVID = 54;
-local TVPgUpBtn 	= "1";
-local TVPgDnBtn 	= "2";
-local TVVolUpBtn 	= "3";
-local TVMuteBtn 	= "4";
-local TVVolDnBtn 	= "5";
-local TVHDMIBtn 	= "6";
-local TVTVBtn 		= "7";
-local TVPwrBtn  	= "8";
-local TVMenuBtn   = ""; -- !!!
+local TVPwrBtn  	= "1";
+local TVTVBtn 		= "2";
+local TVHDMIBtn 	= "3";
+local TVVolUpBtn 	= "4";
+local TVMuteBtn 	= "5";
+local TVVolDnBtn 	= "6";
+local TVPgUpBtn 	= "7";
+local TVRevBtn 		= "8";
+local TVPgDnBtn 	= "9";
+local TVMenuBtn   	= "10";
+local TVUpBtn 		= "11";
+local TVDownBtn 	= "17";
+local TVLeftBtn 	= "13";
+local TVRightBtn 	= "15";
+local TVOKBtn 		= "14";
+local TVBackBtn 	= "12";
+local TVExitBtn 	= "18";
+local TVNum0Btn 	= "16";
+local TVNum1Btn 	= "19";
 
 local HDMIswitchID = 289;
 local HDMIswitchPwrBtn 		= "1";
@@ -39,11 +49,12 @@ local HDMIswitch26Btn 		= "18";
 
 local HDMIswitch_RT2Kbtn 	= HDMIswitch22Btn;
 local HDMIswitch_RT2Kroute = "2";
+local HDMIswitch_DC2Kroute = "5";
 
 local HDMIswitchStateID = 292;
 local HDMIswitchStateOnBtn  = "2";
 local HDMIswitchStateOffBtn = "3";
-local HDMIswitchStateChannelBtnOffset = -3;
+local HDMIswitchStateChannelBtnOffset = -1;
 
 local RTtvID = 274;
 local RTtvPwrBtn 	  = "1";
@@ -97,7 +108,7 @@ local TVkitchenMode = getStrGlobalVal("TVkitchenMode");
 local TVkitchenLastMode = getStrGlobalVal("TVkitchenLastMode");
 
 local HDMIswitchMode = getStrGlobalVal("HDMIswitchMode");
- -- 4 num code: [1stCh_1-6][2ndCh_1-6][PiPMode_0-1][OnOff_0-1]
+ -- 5 num code: [1stCh_1-6][2ndCh_1-6][PiPMode_0-1][PiPCh_1-6][OnOff_0-1]
 
 local RTtvMode = getStrGlobalVal("RTtvMode");
  -- 2 num code: [MenuMode_0-2 : 1 - normal, 2 - ch.sel.][OnOff_0-1]
@@ -108,6 +119,54 @@ end
 
 
 -- FUNCS
+
+function getHMDI_1stR()
+  
+  return string.sub(HDMIswitchMode, 1, 1);
+  
+end
+
+function getHMDI_2ndR()
+  
+  return string.sub(HDMIswitchMode, 2, 2);
+  
+end
+
+function isHMDI_PiPon()
+  
+  return ( string.sub(HDMIswitchMode, 3, 3) == "1" );
+  
+end
+
+function getHDMI_PiPch()
+  
+  return string.sub(HDMIswitchMode, 4, 4);
+  
+end
+
+function isHDMIon()
+  
+  return ( string.sub(HDMIswitchMode, 5, 5) == "1" );
+  
+end
+
+function isHDMIinRT2K()
+  
+  return ( getHMDI_2ndR() == HDMIswitch_RT2Kroute );
+  
+end
+
+function isTVkHDMI()
+  
+  return ( string.sub(TVkitchenMode, 1, 4) == "HDMI" );
+  
+end
+
+function isRTon()
+  
+  return ( string.sub(RTtvMode, 2, 2) == "1" );
+  
+end
 
 function setTVkModes( setMode, saveMode )
   
@@ -150,7 +209,7 @@ end
 function turnTVon()
   
   if ( debugMode ) then
-    fibaro:debug("turnTVon() - TVkM: " .. TVkitchenMode
+    fibaro:debug("# turnTVon() - TVkM: " .. TVkitchenMode
       .. ", TVkLM: " .. TVkitchenLastMode);
   end
   
@@ -188,7 +247,7 @@ end
 function turnHDMIon()
   
   if ( debugMode ) then
-    fibaro:debug("turnHDMIon() - TVkM: " .. TVkitchenMode
+    fibaro:debug("# turnHDMIon() - TVkM: " .. TVkitchenMode
       .. ", HDMIswM: '" .. HDMIswitchMode .. "'");
   end
   
@@ -196,21 +255,25 @@ function turnHDMIon()
     turnTVon();
   end
   
-  if ( string.sub(TVkitchenMode, 1, 4) ~= "HDMI" ) then
+  if ( not isTVkHDMI() ) then
     
     if ( debugMode ) then fibaro:debug("> TV HDMI"); end
     fibaro:call(TVID, "pressButton", TVHDMIBtn);
-    fibaro:sleep(2000);
+    fibaro:sleep(3000);
     
   end
   
-  if ( string.sub(HDMIswitchMode, 4, 4) ~= "1" ) then
+  if ( not isHDMIon() ) then
       
     if ( debugMode ) then fibaro:debug("> HDMIsw Pwr (on)"); end
     fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPwrBtn);
     fibaro:call(HDMIswitchStateID, "pressButton", HDMIswitchStateOnBtn);
     
     HDMIswitchMode = fibaro:getGlobalValue("HDMIswitchMode"); -- reload
+    
+    if ( debugMode ) then
+      fibaro:debug("% turnHDMIon() - newHDMIswM: '" .. HDMIswitchMode .. "'");
+    end
     
     return true
     
@@ -225,25 +288,48 @@ end
 function turnHDMI_RTon()
   
   if ( debugMode ) then
-    fibaro:debug("turnHDMIon() - TVkM: " .. TVkitchenMode
+    fibaro:debug("# turnHDMI_RTon() - TVkM: " .. TVkitchenMode
       .. ", HDMIswM: '" .. HDMIswitchMode .. "'"
       .. ", RTtvM: '" .. RTtvMode .. "'");
   end
   
   turnHDMIon();
   
-  if ( string.sub(RTtvMode, 2, 2) ~= "1" ) then
+  if ( not isRTon() ) then
     -- RT.TV turn ON
     
     if ( debugMode ) then fibaro:debug("> RT.TV Pwr (on)"); end
     fibaro:call(RTtvID, "pressButton", RTtvPwrBtn);
     fibaro:call(RTtvStateID, "pressButton", RTtvStateOnBtn);
+    fibaro:sleep(300);
     
     RTtvMode = fibaro:getGlobalValue("RTtvMode"); -- reload
     
-  end
+    if ( debugMode ) then
+      fibaro:debug("% turnHDMI_RTon() - newRTtvM: '" .. RTtvM .. "'");
+    end
     
-  if ( string.sub(HDMIswitchMode, 2, 2) ~= HDMIswitch_RT2Kroute ) then
+    -- TODO: copy to VD.HDMIswASstate
+    local HDMIswAvlSrc = fibaro:getGlobalValue("HDMIswAvlSrc");
+    if ( (string.len(HDMIswAvlSrc) ~= 7)
+      or string.sub(HDMIswAvlSrc, 1, 1) ~= "9" ) then
+      
+      HDMIswAvlSrc = "9110110"; -- !!! HARDCODE !!!
+      
+    else
+      
+      local str1 = string.sub(HDMIswAvlSrc, 1, 2);
+      local str2 = string.sub(HDMIswAvlSrc, 4, 7);
+      
+      HDMIswAvlSrc = str1 .. "1" .. str2;
+      
+    end
+    
+    fibaro:setGlobal("HDMIswAvlSrc", HDMIswAvlSrc);
+    
+  end
+  
+  if ( not isHDMIinRT2K() ) then
     -- HDMI switching
     
     if ( debugMode ) then fibaro:debug("> HDMIsw RT2K"); end
@@ -254,12 +340,15 @@ function turnHDMI_RTon()
       + HDMIswitchStateChannelBtnOffset);
       
     fibaro:call(HDMIswitchStateID, "pressButton", btnStrIdx);
-    
-    if ( debugMode ) then 
-      fibaro:debug("HDMIswStateVDcallBtnIdx = " .. btnStrIdx);
-    end
+    fibaro:sleep(300);
     
     HDMIswitchMode = fibaro:getGlobalValue("HDMIswitchMode"); -- reload
+    
+    if ( debugMode ) then
+      fibaro:debug("% turnHDMI_RTon() - HDMIsw-RT2K "
+       .. "(HDMIswStateVDcallBtnIdx = " .. btnStrIdx .. "), newHDMIswM: '"
+       .. HDMIswitchMode .. "'");
+    end
     
     return true
     
@@ -271,7 +360,7 @@ end
 
 function forceHDMIon()
   
-  if ( string.sub(HDMIswitchMode, 2, 2) == HDMIswitch_RT2Kroute ) then
+  if ( isHDMIinRT2K() ) then
     
     HDMI_RTon();
     setTVkModes("HDMI_RT", false);
@@ -289,32 +378,46 @@ function HDMI_NextSecRoute()
   -- partially code copied to turnHDMI_PiPon()
   
   if ( debugMode ) then
-    fibaro:debug("HDMI_NextSecRoute() - HDMIswM: '" .. HDMIswitchMode .. "'");
+    fibaro:debug("# HDMI_NextSecRoute() - HDMIswM: '" .. HDMIswitchMode .. "'");
   end
   
-  local curRoute = tonumber(string.sub(HDMIswitchMode, 2, 2));
-  if ( (curRoute < 1) or (curRoute > 5) ) then
-    curRoute = 0;
-  end
+  local curRoute = tonumber(getHMDI_2ndR());
   
-  -- !!! HARDCODE !!!
-  -- 1. The kitchen TV cannot play BluerayDisk Player (#4) :(((
-  -- 2. Last 2ndRroute is unused yet (#6)
-  -- 3. MainMechComp is unused yet too (#3)
-  -- Skip this HDMI switch routes:
-  if ( curRoute == 5 ) then curRoute = 0;
-  elseif ( curRoute == 3 ) then curRoute = 4;
-  elseif ( curRoute == 2 ) then curRoute = 4;
-  end
+  -- code copied from calcNextPiPch
+  local newRoute = curRoute;
+
+  local HDMIswAvlSrc = fibaro:getGlobalValue("HDMIswAvlSrc");
+  -- 9(0-1_srcIsActive)x6
+
+  -- code copied from turnHDMI_RTon()
+  local str1 = string.sub(HDMIswAvlSrc, 1, 2);
+  local str2 = string.sub(HDMIswAvlSrc, 4, 7);
   
-  local btnIdx = tonumber(HDMIswitch21Btn) + curRoute; -- auto +1
+  HDMIswAvlSrc = str1 .. "1" .. str2;
+  
+  local firstRoute = newRoute;
+  
+  repeat
+    
+    newRoute = newRoute + 1;
+    
+    -- cycling (max route count = 6)
+    if ( newRoute > 6 ) then newRoute = 1; end
+    
+  until ( (newRoute == firstRoute)
+    or (string.sub(HDMIswAvlSrc, newRoute + 1,
+      newRoute + 1) == "1") );
+  
+  local btnIdx = tonumber(HDMIswitch21Btn) + newRoute - 1;
   if ( debugMode ) then
-    fibaro:debug("> HDMIsw 2ndRoute++ (" .. tostring(curRoute + 1) .. ")");
+    fibaro:debug("> HDMIsw 2ndRoute++ (" .. tostring(newRoute) 
+      .. ", btn #" .. tostring(btnIdx) .. ")");
   end
   fibaro:call(HDMIswitchID, "pressButton", tostring(btnIdx));
   
   local btnStateStrIdx = tostring(btnIdx + HDMIswitchStateChannelBtnOffset);
   fibaro:call(HDMIswitchStateID, "pressButton", btnStateStrIdx);
+  fibaro:sleep(300);
   
   if ( debugMode ) then 
     fibaro:debug("HDMIswStateVDcallBtnIdx = " .. btnStateStrIdx);
@@ -322,17 +425,28 @@ function HDMI_NextSecRoute()
   
   HDMIswitchMode = fibaro:getGlobalValue("HDMIswitchMode"); -- reload
   
-  if ( tostring(curRoute + 1) == HDMIswitch_RT2Kroute ) then -- switched to RT
-    return turnHDMI_RTon();
-  elseif ( tostring(curRoute) == HDMIswitch_RT2Kroute ) then -- switched from RT
-    return turnHDMI_RToff();
+  if ( debugMode ) then
+    fibaro:debug("% HDMI_NextSecRoute() - newHDMIswM: '"
+      .. HDMIswitchMode .. "'");
   end
+  
+  if ( tostring(newRoute) == HDMIswitch_RT2Kroute ) then -- switched to RT
+    return turnHDMI_RTon();
+  else
+    if ( tostring(curRoute) == HDMIswitch_RT2Kroute ) then -- switched from RT
+      return turnHDMI_RToff();
+    end
+  end
+  
+  return (curRoute ~= newRoute);
   
 end
 
 function turnTVOff()
   
-  if ( debugMode ) then fibaro:debug("turnTVOff()"); end
+  if ( debugMode ) then
+    fibaro:debug("# turnTVOff() - TVkM: " .. TVkitchenMode);
+  end
   
   if ( TVkitchenMode ~= "" ) then
     
@@ -341,10 +455,10 @@ function turnTVOff()
     
     turnHDMIoff();
     --[[
-    if ( string.sub(HDMIswitchMode, 4, 4) == "1" ) then
+    if ( isHDMIon() ) then
       
-      if ( (string.sub(RTtvMode, 2, 2) == "1")
-        and (string.sub(HDMIswitchMode, 2, 2) == HDMIswitch_RT2Kroute) ) then
+      if ( (isRTon())
+        and (isHDMIinRT2K()) ) then
         
         turnHDMI_RToff();
         
@@ -373,7 +487,10 @@ function turnTVOff()
     
   else
     
-    if ( debugMode ) then fibaro:debug("* SET TVkM to ''"); end
+    if ( debugMode ) then
+      fibaro:debug("% turnTVOff() - SET TVkM to ''");
+    end
+    
     fibaro:setGlobal("TVkitchenMode", "");
     
     return false
@@ -385,11 +502,11 @@ end
 function turnHDMIoff()
   
   if ( debugMode ) then
-    fibaro:debug("turnHDMIoff() - TVkM: " .. TVkitchenMode
+    fibaro:debug("# turnHDMIoff() - TVkM: " .. TVkitchenMode
       .. ", HDMIswM: '" .. HDMIswitchMode .. "'");
   end
   
-  if ( string.sub(TVkitchenMode, 1, 4) == "HDMI" ) then
+  if ( isTVkHDMI() ) then
     
     if ( debugMode ) then fibaro:debug("> TV TV"); end
     fibaro:call(TVID, "pressButton", TVTVBtn);
@@ -398,7 +515,7 @@ function turnHDMIoff()
     
   end
   
-  if ( string.sub(HDMIswitchMode, 4, 4) == "1" ) then
+  if ( isHDMIon() ) then
     -- HDMI switch turn OFF
     
     turnHDMI_RToff();
@@ -408,6 +525,10 @@ function turnHDMIoff()
     fibaro:call(HDMIswitchStateID, "pressButton", HDMIswitchStateOffBtn);
     
     HDMIswitchMode = fibaro:getGlobalValue("HDMIswitchMode"); -- reload
+    
+    if ( debugMode ) then
+      fibaro:debug("% turnHDMIoff() - newHDMIswM: '" .. HDMIswitchMode .. "'");
+    end
     
     return true
     
@@ -420,95 +541,122 @@ end
 function turnHDMI_RToff()
   
   if ( debugMode ) then
-    fibaro:debug("turnHDMI_RToff() - TVkM: " .. TVkitchenMode
+    fibaro:debug("# turnHDMI_RToff() - TVkM: " .. TVkitchenMode
       .. ", HDMIswM: '" .. HDMIswitchMode .. "'"
       .. ", RTtvM: '" .. RTtvMode .. "'");
   end
   
-  if ( (string.sub(RTtvMode, 2, 2) == "1")
-    and (string.sub(HDMIswitchMode, 2, 2) == HDMIswitch_RT2Kroute) ) then
+  if ( isRTon() and isHDMIinRT2K() ) then
     -- RT.TV turn OFF
     
     if ( debugMode ) then fibaro:debug("> RT.TV Pwr (off)"); end
     fibaro:call(RTtvID, "pressButton", RTtvPwrBtn);
     fibaro:call(RTtvStateID, "pressButton", RTtvOffBtn);
+    fibaro:sleep(300);
     
     RTtvMode = fibaro:getGlobalValue("RTtvMode"); -- reload
+    
+    -- TODO: copy to VD.HDMIswASstate
+    local HDMIswAvlSrc = fibaro:getGlobalValue("HDMIswAvlSrc");
+    if ( (string.len(HDMIswAvlSrc) ~= 7)
+      or string.sub(HDMIswAvlSrc, 1, 1) ~= "9" ) then
+      
+      HDMIswAvlSrc = "9100110"; -- !!! HARDCODE !!!
+      
+    else
+      
+      local str1 = string.sub(HDMIswAvlSrc, 1, 2);
+      local str2 = string.sub(HDMIswAvlSrc, 4, 7);
+      
+      HDMIswAvlSrc = str1 .. "0" .. str2;
+      
+    end
+    
+    fibaro:setGlobal("HDMIswAvlSrc", HDMIswAvlSrc);
+    
+    if ( debugMode ) then
+      fibaro:debug("% turnHDMI_RToff() - newHDMIswM: '"
+        .. HDMIswitchMode .. "'");
+    end
     
     return true
     
   end
   
   return false
-  
-end
 
 end
 
-function calcNextPiProute()
+function calcNextPiPch()
   
   if ( debugMode ) then
-    fibaro:debug("calcNextPiProute() - HDMIswM: '" .. HDMIswitchMode .. "'");
+    fibaro:debug("calcNextPiPch() - HDMIswM: '" .. HDMIswitchMode .. "'");
   end
   
-  local route1 = string.sub(HDMIswitchMode, 1, 1);
-  local route2 = string.sub(HDMIswitchMode, 2, 2);
-  local newPiProute = 0;
+  local route1 = getHMDI_1stR();
+  local route2 = getHMDI_2ndR();
+  local newPiPch = 0;
   
-  if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) == 0 ) then
+  if ( isHMDI_PiPon() ) then
     
-    newPiProute = tonumber(route1) + 1;
+    newPiPch = tonumber(getHDMI_PiPch());
     
   else
     
-    newPiProute = tonumber(string.sub(HDMIswitchMode, 3, 3)) + 1;
+    newPiPch = tonumber(route1);
     
   end
   
-  -- !!! HARDCODE !!! skip BDpl
-  if ( newPiProute == 4 ) then
-    newPiProute = newPiProute + 1;
+  local HDMIswAvlSrc = fibaro:getGlobalValue("HDMIswAvlSrc");
+  -- 9(0-1_srcIsActive)x6
+  
+  local firstRoute = newPiPch;
+  
+  repeat
     
-    if ( debugMode ) then fibaro:debug("> HDMIsw PiP sel"); end
-    fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPSelBtn);
-  end
-  
-  -- skip cur route
-  if ( newPiProute == route2) then newPiProute = newPiProute + 1; end
-  
-  -- !!! HARDCODE !!! skip unsed route
-  if ( newPiProute > 5 ) then
-    newPiProute = 1;
+    newPiPch = newPiPch + 1;
     
-    if ( debugMode ) then fibaro:debug("> HDMIsw PiP sel"); end
-    fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPSelBtn);
-  end
+    -- skip cur route
+    if ( (newPiPch < 6) and (newPiPch == tonumber(route2)) ) then
+      newPiPch = newPiPch + 1;
+    end
+    
+    -- cycling (max route count = 6)
+    if ( newPiPch > 6 ) then newPiPch = 1; end
+    
+  until ( (newPiPch == firstRoute)
+    or (string.sub(HDMIswAvlSrc, newPiPch + 1,
+      newPiPch + 1) == "1") );
+      
+    --if ( debugMode ) then fibaro:debug("> HDMIsw PiP sel"); end
+    --fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPSelBtn);
   
-  -- cycling (max route count = 6)
-  if ( newPiProute > 6 ) then newPiProute = 1; end
-  
-  HDMIswitchMode = route1 .. route2 .. tostring(newPiProute) .. "1";
+  HDMIswitchMode = route1 .. route2 .. "1" .. tostring(newPiPch) .. "1";
   fibaro:setGlobal("HDMIswitchMode", HDMIswitchMode);
   
   if ( debugMode ) then
-    fibaro:debug("calcNextPiProute() - newHDMIswM: '"
+    fibaro:debug("calcNextPiPch() - newHDMIswM: '"
       .. HDMIswitchMode .. "'");
   end
   
-  return newPiProute;
+  return newPiPch;
   
 end
 
 function turnHDMI_PiPon()
   
   if ( debugMode ) then
-    fibaro:debug("turnHDMI_PiPon() - HDMIswM: '" .. HDMIswitchMode .. "'");
+    fibaro:debug("# turnHDMI_PiPon() - HDMIswM: '" .. HDMIswitchMode .. "'");
   end
   
   --turnHDMIon();
   
-  if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) == 0 ) then
-    -- HDMI switch PiP mode ON
+  if ( not isHMDI_PiPon() ) then
+    
+    local curHDMIswitchMode = HDMIswitchMode;
+    local route1 = getHMDI_1stR();
+    local route2 = getHMDI_2ndR();
+    local newPiPch = calcNextPiPch();
     
     -- WARNING! The turning on the PiP mode setted 2nd ch. equal 1st
     -- Solution: 1. save (don't correct 2nd route in HDMIswMode)
@@ -516,11 +664,8 @@ function turnHDMI_PiPon()
     --   and restore in PiPoff
     -- TODO: autoselect depending TVsets on
     --  (note: in current (PiPon) moment => need to save)
-    
+
     -- 2nd solution (partially code copied from HDMI_NextSecRoute())
-    local curHDMIswitchMode = HDMIswitchMode;
-    local route1 = string.sub(HDMIswitchMode, 1, 1);
-    local route2 = string.sub(HDMIswitchMode, 2, 2);
     local btnIdx = tonumber(HDMIswitch11Btn) + tonumber(route2) - 1;
     
     if ( debugMode ) then
@@ -529,20 +674,17 @@ function turnHDMI_PiPon()
     fibaro:call(HDMIswitchID, "pressButton", tostring(btnIdx));
     fibaro:sleep(4000);
     
-    local btnStrIdx = tostring(btnIdx + HDMIswitchStateChannelBtnOffset);
-    HDMIswitchMode = route2 .. route2 .. route2 .. "1";
-    
     if ( debugMode ) then fibaro:debug("> HDMIsw PiP (on)"); end
     fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPBtn);
     
-    local newPiProute = calcNextPiProute();
+    -- 1st solution - nothing to do
+    HDMIswitchMode = route1 .. route2 .. "1" .. newPiPch .. "1";
     
-    -- 2nd solution - save 1st route
-    HDMIswitchMode = route1 .. route2 .. newPiProute .. "1";
     fibaro:setGlobal("HDMIswitchMode", HDMIswitchMode);
     
     if ( debugMode ) then
-      fibaro:debug("turnHDMI_PiPon() - newHDMIswM: '" .. HDMIswitchMode .. "'");
+      fibaro:debug("% turnHDMI_PiPon() - newHDMIswM: '"
+        .. HDMIswitchMode .. "'");
     end
     
     return true
@@ -556,15 +698,15 @@ end
 function turnHDMI_PiPoff()
   
   if ( debugMode ) then
-    fibaro:debug("turnHDMI_PiPoff() - HDMIswM: '" .. HDMIswitchMode .. "'");
+    fibaro:debug("# turnHDMI_PiPoff() - HDMIswM: '" .. HDMIswitchMode .. "'");
   end
   
-  if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then
+  if ( isHMDI_PiPon() ) then
     -- HDMI switch PiP mode OFF
     
     -- restore route
-    local route1 = string.sub(HDMIswitchMode, 1, 1);
-    local route2 = string.sub(HDMIswitchMode, 2, 2);
+    local route1 = getHMDI_1stR();
+    local route2 = getHMDI_2ndR();
     -- 1st solution (see to turnHDMI_PiPon()) - restore 2nd route
     --[[if ( debugMode ) then
       fibaro:debug("> HDMIsw 2stRoute = " .. route2);
@@ -581,16 +723,19 @@ function turnHDMI_PiPoff()
     fibaro:call(HDMIswitchID, "pressButton",
       tostring(tonumber(HDMIswitch11Btn) + tonumber(route1) - 1)
       );
+    fibaro:sleep(4000);
     
-    if ( debugMode ) then fibaro:debug("> HDMIsw PiP (off)"); end
     --auto because routes changed
+    --if ( debugMode ) then fibaro:debug("> HDMIsw PiP (off)"); end
     --fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPBtn);
     
-    HDMIswitchMode = route1 .. route2 .. "01";
+    HDMIswitchMode = route1 .. route2 .. "0" .. getHDMI_PiPch() .. "1";
+    
     fibaro:setGlobal("HDMIswitchMode", HDMIswitchMode);
     
     if ( debugMode ) then
-      fibaro:debug("turnHDMI_PiPoff() - newHDMIswM: '" .. HDMIswitchMode .. "'");
+      fibaro:debug("% turnHDMI_PiPoff() - newHDMIswM: '"
+        .. HDMIswitchMode .. "'");
     end
     
     return true
@@ -604,20 +749,19 @@ end
 function turnHDMI_PiPent()
   
   if ( debugMode ) then
-    fibaro:debug("turnHDMI_PiPent() - HDMIswM: '" .. HDMIswitchMode .. "'");
+    fibaro:debug("# turnHDMI_PiPent() - HDMIswM: '" .. HDMIswitchMode .. "'");
   end
   
-  local curPiProute = string.sub(HDMIswitchMode, 3, 3);
-  
-  if ( tonumber(curPiProute) > 0 ) then
-    -- HDMI switch PiP ENTER
+  if ( isHMDI_PiPon() ) then
+    
+    local curPiPch = getHDMI_PiPch();
     
     if ( debugMode ) then fibaro:debug("> HDMIsw PiP ent"); end
     fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPEntBtn);
     fibaro:sleep(4000);
     
     -- restore route
-    local route1 = string.sub(HDMIswitchMode, 1, 1);
+    local route1 = getHMDI_1stR();
     -- 1st solution (see to turnHDMI_PiPon()) - no need action
     -- 2nd solution
     if ( debugMode ) then
@@ -627,11 +771,21 @@ function turnHDMI_PiPent()
       tostring(tonumber(HDMIswitch11Btn) + tonumber(route1) - 1)
       );
     
-    HDMIswitchMode = route1 .. curPiProute .. "01";
+    if ( tonumber(curPiPch) == 0 ) then
+    
+      HDMIswitchMode = route1 .. getHMDI_2ndR() .. "001";
+      
+    else
+      
+      HDMIswitchMode = route1 .. curPiPch .. "0" .. curPiPch .. "1";
+    
+    end
+    
     fibaro:setGlobal("HDMIswitchMode", HDMIswitchMode);
     
     if ( debugMode ) then
-      fibaro:debug("turnHDMI_PiPent() - newHDMIswM: '" .. HDMIswitchMode .. "'");
+      fibaro:debug("% turnHDMI_PiPent() - newHDMIswM: '"
+        .. HDMIswitchMode .. "'");
     end
     
     return true
@@ -648,7 +802,7 @@ end
 -- General turn on for the any action
 if ( turnTVon() ) then
   
-  if ( string.sub(TVkitchenMode, 1, 4) == "HDMI" ) then
+  if ( isTVkHDMI() ) then
     
     if ( TVkitchenMode == "HDMI_RT" ) then
       
@@ -664,20 +818,35 @@ if ( turnTVon() ) then
   
   return
   
+else
+  
+  if ( isTVkHDMI() ) then
+    
+    if ( TVkitchenMode == "HDMI_RT" ) then
+      
+      turnHDMI_RTon()
+      
+    else
+      
+      turnHDMIon();
+      
+    end
+    
+  end
+  
 end
 
 -- Key pressing
 if ( tonumber(buttonPressed) == 1) then ---------------------------------------
   
-  if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
-    and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
+  if ( isTVkHDMI() and isHDMIon() ) then
     
-    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
+    if ( isHMDI_PiPon() ) then
       
       if ( debugMode ) then fibaro:debug("> HDMIsw PiP sel"); end
       fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPSelBtn);
       
-      calcNextPiProute();
+      calcNextPiPch();
       
     else
       
@@ -725,8 +894,7 @@ if ( tonumber(buttonPressed) == 1) then ---------------------------------------
     if ( TVkitchenMode == "TVMenu" ) then
       
       if ( (TVkitchenLastMode == "HDMI_RT")
-        and (string.sub(HDMIswitchMode, 2, 2) == HDMIswitch_RT2Kroute)
-        and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
+        and (isHDMIinRT2K()) and (isHDMIon()) ) then
         
         if ( string.sub(RTtvMode, 1, 1) ~= "1" ) then -- RT.Menu normal
           -- exit from RT.TV Menu normal mode
@@ -781,15 +949,14 @@ if ( tonumber(buttonPressed) == 1) then ---------------------------------------
   
 elseif ( tonumber(buttonPressed) == 2) then -----------------------------------
   
-  if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
-    and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
+  if ( isTVkHDMI() and isHDMIon() ) then
     
-    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
+    if ( isHMDI_PiPon() ) then
       
       if ( debugMode ) then fibaro:debug("> HDMIsw PiP sel"); end
       fibaro:call(HDMIswitchID, "pressButton", HDMIswitchPiPSelBtn);
       
-      calcNextPiProute();
+      calcNextPiPch();
       
     else
       
@@ -850,10 +1017,9 @@ elseif ( tonumber(buttonPressed) == 2) then -----------------------------------
   
 elseif ( tonumber(buttonPressed) == 3) then -----------------------------------
   
-  if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
-    and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
+  if ( isTVkHDMI() and isHDMIon() ) then
     
-    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
+    if ( isHMDI_PiPon() ) then
       
       turnHDMI_PiPoff();
       
@@ -891,11 +1057,13 @@ elseif ( tonumber(buttonPressed) == 3) then -----------------------------------
         
       elseif ( TVkitchenMode == "HDMI_Other" ) then
         
-        
+        if ( debugMode ) then fibaro:debug("> TV VolUp"); end
+        fibaro:call(TVID, "pressButton", TVVolUpBtn);
         
       else
         
-        
+        if ( debugMode ) then fibaro:debug("> TV VolUp"); end
+        fibaro:call(TVID, "pressButton", TVVolUpBtn);
         
       end
       
@@ -910,8 +1078,8 @@ elseif ( tonumber(buttonPressed) == 3) then -----------------------------------
     elseif ( TVkitchenMode == "TVMenu" ) then
       
       if ( (TVkitchenLastMode == "HDMI_RT")
-        and (string.sub(HDMIswitchMode, 2, 2) == HDMIswitch_RT2Kroute)
-        and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
+        and (isHDMIinRT2K())
+        and (isHDMIon()) ) then -- HDMI on
         
         if ( string.sub(RTtvMode, 1, 1) ~= "2" ) then -- RT.Menu OK
           -- start RT.TV Menu OK mode
@@ -958,10 +1126,9 @@ elseif ( tonumber(buttonPressed) == 3) then -----------------------------------
   
 elseif ( tonumber(buttonPressed) == 4) then -----------------------------------
   
-  if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
-    and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
+  if ( isTVkHDMI() and isHDMIon() ) then
     
-    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
+    if ( isHMDI_PiPon() ) then
       
       turnHDMI_PiPoff();
       
@@ -1016,10 +1183,9 @@ elseif ( tonumber(buttonPressed) == 4) then -----------------------------------
   
 elseif ( tonumber(buttonPressed) == 5) then -----------------------------------
   
-  if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
-    and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
+  if ( isTVkHDMI() and isHDMIon() ) then
     
-    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
+    if ( isHMDI_PiPon() ) then
       
       turnHDMI_PiPent();
       
@@ -1095,10 +1261,9 @@ elseif ( tonumber(buttonPressed) == 5) then -----------------------------------
   
 elseif ( tonumber(buttonPressed) == 6) then -----------------------------------
   
-  if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
-    and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
+  if ( isTVkHDMI() and isHDMIon() ) then
     
-    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
+    if ( isHMDI_PiPon() ) then
       
       turnHDMI_PiPent();
       
@@ -1148,10 +1313,9 @@ elseif ( tonumber(buttonPressed) == 6) then -----------------------------------
   
 elseif ( tonumber(buttonPressed) == 7) then -----------------------------------
   
-  if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
-    and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
+  if ( isTVkHDMI() and isHDMIon() ) then
     
-    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
+    if ( isHMDI_PiPon() ) then
       
       turnHDMI_PiPoff();
       
@@ -1236,10 +1400,9 @@ elseif ( tonumber(buttonPressed) == 7) then -----------------------------------
   
 elseif ( tonumber(buttonPressed) == 8) then -----------------------------------
   
-  if ( (string.sub(TVkitchenMode, 1, 4) == "HDMI")
-    and (string.sub(HDMIswitchMode, 4, 4) == "1") ) then -- HDMI on
+  if ( isTVkHDMI() and isHDMIon() ) then
     
-    if ( tonumber(string.sub(HDMIswitchMode, 3, 3)) > 0 ) then -- PiP on
+    if ( isHMDI_PiPon() ) then
       
       turnHDMI_PiPoff();
       

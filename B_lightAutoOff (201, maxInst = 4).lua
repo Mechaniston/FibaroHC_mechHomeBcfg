@@ -1,7 +1,7 @@
 --[[
 %% properties
 36 value
-284 value
+307 value
 %% globals
 --]]
 
@@ -9,7 +9,7 @@
 -- CONSTS
 
 -- Devices ID's
-local doorID = 284;
+local doorID = 307;
 local lightID = 36;
 
 local debugMode = false;
@@ -70,6 +70,6 @@ elseif ( (tonumber(door) > 0) and (tonumber(light) > 0)
       fibaro:call(lightID, "turnOff");
       
     end
-  --end, 5 * 60 * 1000);
+  --end, 15 * 60 * 1000);
   
 end

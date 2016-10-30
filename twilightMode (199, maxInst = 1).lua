@@ -4,7 +4,7 @@
 %% globals
 --]]
 
-local debugMode = false;
+local debugMode = true;
 local debugModeDetail = false;
 
 -----
@@ -78,11 +78,11 @@ while true do
     or (currentMinutes >= sunsetMinutes) ) then
     
     if ( fibaro:getGlobalValue("twilightMode") == "0" ) then
-      if debugMode then fibaro:debug("TwilightMode is ON!"); end
-      
       fibaro:setGlobal("twilightMode", "1");
       
-      fibaro:call(2, "sendDefinedEmailNotification", "3");
+      if ( debugMode ) then fibaro:debug("twilightMode is ON!"); end
+      
+      --fibaro:call(2, "sendDefinedEmailNotification", "3");
       fibaro:call(52, "sendDefinedEmailNotification", "3");
     end
     
@@ -90,20 +90,40 @@ while true do
     and (currentMinutes < sunsetMinutes) ) then
     
     if ( fibaro:getGlobalValue("twilightMode") == "1" ) then
-      
-      if debugMode then fibaro:debug("TwilightMode is OFF!"); end
-      
       fibaro:setGlobal("twilightMode", "0");
       
-      fibaro:call(2, "sendDefinedEmailNotification", "3");
+      if ( debugMode ) then fibaro:debug("twilightMode OFF!"); end
+      
+      --fibaro:call(2, "sendDefinedEmailNotification", "3");
       fibaro:call(52, "sendDefinedEmailNotification", "3");
+    end
+    
+  end
+        
+  if ( currentMinutes <= sunriseMinutes ) then
+    
+    if ( (fibaro:getGlobalValue("twilightMode") == "1")
+      and (currentMinutes >= 0 * 60 + 30) ) then -- HARDCODED 23:30 (UTC +4 instead 3)
+      
+      if ( fibaro:getGlobalValue("nightMode") == "0" ) then
+        fibaro:setGlobal("nightMode", "1");
+        
+        if ( debugMode ) then fibaro:debug("nightMode ON!"); end
+      end
+      
+    elseif ( (fibaro:getGlobalValue("twilightMode") == "0")
+      or (currentMinutes >= 7 * 60) ) then -- HARDCODED 6:00 (UTC +4 instead 3)
       
       if ( fibaro:getGlobalValue("nightMode") == "1" ) then
         fibaro:setGlobal("nightMode", "0");
+        
+        if ( debugMode ) then fibaro:debug("nightMode OFF!"); end
       end
       
     end
+    
   end
   
-  fibaro:sleep(5 * 60 * 1000); -- 5 minute
+  fibaro:sleep(5 * 60 * 1000); -- 5 minutes
+  
 end

@@ -13,7 +13,7 @@ local bGapClosed  = 20; -- the up-closed after gap opened
 local bFullClosed = 0;
 
 local moveTime  = 20 * 1000;
-local knockTime = 300;
+local knockTime = 200;
 local relaxTime = 5 * 1000;
 
 local blindsMidID = 181;

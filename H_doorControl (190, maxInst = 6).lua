@@ -20,14 +20,16 @@ local debugMode = true;
 -- GET ENVS --
 
 --[[fibaro:sleep(50); -- to prevent to kill all instances
-if ( fibaro:countScenes() > 1 ) then
-  if ( debugMode ) then fibaro:debug("Double start"
-    .. "(" .. tostring(fibaro:countScenes()) .. ").. Abort dup!"); end
+if ( fibaro:countScenes() > 1 )
+  then
+  if ( debugMode ) then fibaro:debug("Double start.. Abort dup!"); end
   fibaro:abort();
 end--]]
 
 local doorIntState, doorIntStateMT = fibaro:get(doorIntID, "value");
 local doorExtState, doorExtStateMT = fibaro:get(doorExtID, "value");
+
+local currentTime = os.date("*t");
 
 
 -- PROCESS --
@@ -38,15 +40,18 @@ if ( (doorIntState == "0") and (doorExtState == "0") ) then -- all closed
   
   fibaro:call(286, "turnOff");
   
-  if ( doorExtStateMT - doorIntStateMT  <= 2 * 60 ) then
+  if ( (doorIntStateMT - doorExtStateMT  <= 2 * 60)
+    and (doorIntStateMT - doorExtStateMT >= 0) ) then
     -- somebody settled in the home (incoming 4/4 !!!-> or welcoming 4/4)
     fibaro:call(2, "sendEmail", "MechFHC - doors control",
       "Somebody settled in the home");
     
     --fibaro:call(59, "sendPhotoToUser", "52");
     fibaro:call(59, "sendPhotoToEmail", "v.pavlov@at.com.ru");
+    -- usually, nothing in cam already
     
-  elseif ( doorIntStateMT - doorExtStateMT  <= 10 ) then
+  elseif ( (doorExtStateMT - doorIntStateMT  <= 60)
+    and (doorExtStateMT - doorIntStateMT > 0) ) then
     -- somebody left the home (outgoing 4/4)
     fibaro:call(2, "sendEmail", "MechFHC - doors control",
       "Somebody left the home");
@@ -54,6 +59,8 @@ if ( (doorIntState == "0") and (doorExtState == "0") ) then -- all closed
   else
     
     if ( debugMode ) then fibaro:debug("! Cannot determine event type"); end
+    fibaro:call(2, "sendEmail", "MechFHC - doors control",
+      "Cannot determine event type!!!");
     
   end
     
@@ -62,14 +69,18 @@ elseif ( (doorIntState == "0") and (doorExtState == "1") ) then
   
   if ( debugMode ) then fibaro:debug("ExtDoor are opened and IntDoor are closed"); end
   
-  fibaro:call(286, "turnOn");
+  if ( (currentTime.hour > 4) and (currentTime.hour < 21) ) then -- HARDCODED 6:00-21:00 (UTC +4 instead 3)
+    fibaro:call(286, "turnOn");
+  end
   
 elseif ( (doorIntState == "1") and (doorExtState == "0") ) then
   -- outgoing 1/4 or welcoming 1/4, 3/4 or incoming 3/4
   
   if ( debugMode ) then fibaro:debug("IntDoor are opened and ExtDoor are closed"); end
   
-  fibaro:call(286, "turnOn");
+  if ( (currentTime.hour > 4) and (currentTime.hour < 21) ) then -- HARDCODED 6:00-21:00 (UTC +4 instead 3)
+    fibaro:call(286, "turnOn");
+  end
   
   --fibaro:call(59, "sendPhotoToUser", "52");
   fibaro:call(59, "sendPhotoToEmail", "mechanist@at.com.ru");
@@ -80,12 +91,14 @@ elseif ( (doorIntState == "1") and (doorExtState == "1") ) then
   
   fibaro:call(286, "turnOff");
   
-  if ( doorIntStateMT - doorExtStateMT <= 5 ) then
+  if ( (doorExtStateMT - doorIntStateMT <= 60)
+      and (doorExtStateMT - doorIntStateMT >= 0) ) then
     -- somebody exited from the home (outgoing 2/4 or welcoming 2/4)
     fibaro:call(2, "sendEmail", "MechFHC - doors control",
       "Somebody exited from the home");
     
-  elseif ( doorExtStateMT - doorIntStateMT <= 10 ) then
+  elseif ( (doorIntStateMT - doorExtStateMT <= 60)
+      and (doorIntStateMT - doorExtStateMT > 0) ) then
     -- sombody entered in the home (incoming 2/4)
     fibaro:call(2, "sendEmail", "MechFHC - doors control",
       "Somebody entered in the home");

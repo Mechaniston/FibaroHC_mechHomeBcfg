@@ -32,7 +32,7 @@ local btnScnActRelease   = 13; -- momentary switch only
 
 local btnKind_OneTwo     = 10; -- use 0 for FIRST channel or 10 for SECOND channel
 
-local debugMode = true;
+local debugMode = false;
 
 
 -- GET ENVS --

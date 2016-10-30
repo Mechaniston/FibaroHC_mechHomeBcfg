@@ -12,18 +12,43 @@ local vdLightHllID        = 207;
 local vdLightHllSwitchBtn = "5";
 
 local startSource = fibaro:getSourceTrigger();
+
 local inDoorState, inDoorDT = fibaro:get(248, "value"); -- К:ДверьВнутр
 local hallSensState, hallSensDT = fibaro:get(236, "value"); -- К:Сенсор
-local hallLux = fibaro:getValue(238, "value"); -- К:Освещенность
-local isLightInRoom = -- simple sleep detection
-  ( tonumber(fibaro:getValue(40, "value")) > 0 ) -- ctrlBigRoom:СветОснОбщ
---  or ( tonumber(fibaro:getValue(228, "value")) > 0 ) -- БК:УпрРозетка (- бра напол.)
-  or ( tonumber(fibaro:getValue(230, "value")) > 0 ) -- БК:Бра(настен.)
+local hallLux = fibaro:getValue(296, "value"); -- К:Освещенность
 
-if ( debugMode ) then fibaro:debug("hallSens = " .. hallSensState .. ", hallLux = " .. hallLux); end
+local isLightInRoom = false;
+if ( -- simple sleep detection
+  (tonumber(fibaro:getValue(40, "value")) > 0) -- ctrlBigRoom:СветОснОбщ
+--  or ( tonumber(fibaro:getValue(228, "value")) > 0 ) -- БК:УпрРозетка
+--  (- бра напол.)
+  or (tonumber(fibaro:getValue(230, "value")) > 0) -- БК:Бра(настен.)
+  ) then
+  isLightInRoom = true;
+end
+
+local currentTime = os.date("*t"); -- CAUTION! UTC+4
+local twilightMode = false;
+if ( fibaro:getGlobalValue("twilightMode") == "0" ) then
+  if ( (currentTime.hour < 10) or (currentTime.hour > 21) ) then
+    -- 0..8 + 21..24
+    twilightMode = true;
+  end
+else
+  twilightMode = true;
+end
+
+if ( debugMode ) then
+  fibaro:debug("hallSens = " .. hallSensState
+    .. ", hallLux = " .. hallLux
+    .. ", twilightMode = " .. tostring(twilightMode)
+      .. " (H = " .. tostring(currentTime.hour) .. ")"
+    .. ", isLightInRoom = " .. tostring(isLightInRoom));
+end
 
 if (
-  ( (tonumber(hallSensState) > 0) and (tonumber(hallLux) < 70) )
+  ( --(tonumber(hallSensState) > 0) and
+    (tonumber(hallLux) < 70) )
   -- Warning! The Hall Lux Value (70) must be at least more or equal
   -- lighting in hall after this script the lights on for prevent
   -- duplicate call
@@ -35,7 +60,7 @@ if (
       .. ", inDoor = " .. inDoorState .. ", inDoorDT = " .. inDoorDT);
   end
   
-  if ( (tonumber(inDoorState) > 0) and (hallSensDT - inDoorDT < 10) ) then
+  if ( (tonumber(inDoorState) > 0) and (hallSensDT - inDoorDT < 20) ) then
     
     if ( debugMode ) then fibaro:debug("Somebody coming!"); end
     
@@ -75,10 +100,11 @@ if (
     if ( debugMode ) then fibaro:debug("Movement in hall detected!"); end
     
     if ( tonumber(fibaro:getValue(4, "value")) > 0 ) then -- Общее:ПитаниеСвета
-      if ( (fibaro:getGlobalValue("twilightMode") == "0")
-        or isLightInRoom ) then
+      
+      if --( (not twilightMode) or isLightInRoom ) then -- 4 wife pleasure, again :(((
+        ( isLightInRoom ) then
         
-        if ( debugMode ) then fibaro:debug("No twilight or there is a light in the BR "); end
+        if ( debugMode ) then fibaro:debug("[No twilight or] there is a light in the BR "); end
         
         if ( (fibaro:getValue(151, "value") == "0")
           or (fibaro:getValue(151, "dead") >= "1") ) then
@@ -107,7 +133,7 @@ if (
           
         end
         
-      else -- if no light in BigRoom
+      else -- if no light in BigRoom and twilightMode is active
         
         --[[
         if ( tonumber(fibaro:getValue(148, "value")) == 0 ) then -- К_Х:Свет_общ

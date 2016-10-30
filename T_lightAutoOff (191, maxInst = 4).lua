@@ -12,7 +12,7 @@
 local doorID = 58;
 local lightID = 35;
 
-local debugMode = true;
+local debugMode = false;
 
 
 -- GETENV
@@ -30,7 +30,7 @@ end
 
 -- PROCESS
 
-if ( fibaro:countScenes() > 1 ) then
+if ( fibaro:countScenes() > 2 ) then
   
   if ( debugMode ) then fibaro:debug("Second scene!"); end
   --fibaro:abort();

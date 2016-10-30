@@ -20,7 +20,7 @@ local btnScnActRelease   = 13; -- momentary switch only
 
 local btnKind_OneTwo     = 0; -- use 0 for FIRST channel or 10 for SECOND channel
 
-local debugMode = true;
+local debugMode = false;
 
 
 -- GET ENVS --
@@ -34,26 +34,20 @@ end
 
 local sceneActID = tonumber(fibaro:getValue(buttonID, "sceneActivation"));
 
-local bedIsDown = tonumber(fibaro:getValue(bedIsDownID, "value"));
-
 if ( debugMode ) then
   fibaro:debug(
   	"sceneActID = " .. tostring(sceneActID) .. ", "
     .. "btnID = " .. scrTrigger['deviceID'] .. ", "
-  	.. "btnValue = " .. fibaro:getValue(buttonID, "value") .. ", "
-    .. "bedIsDown = " .. tostring(bedIsDown)
+  	.. "btnValue = " .. fibaro:getValue(buttonID, "value")
   );
-end
-
-if ( bedIsDown == 0 ) then
-  if ( debugMode ) then fibaro:debug("Bed is closed.. Abort!"); end
-  fibaro:abort();
 end
 
 if ( ((btnKind_OneTwo == 0) and (sceneActID >= 20))
 	or ((btnKind_OneTwo == 10) and (sceneActID < 20)) ) then
+  
   if ( debugMode ) then fibaro:debug("Another button.. Abort!"); end
   fibaro:abort();
+  
 end
 
 
@@ -64,7 +58,7 @@ if ( (sceneActID == btnScnActClick + btnKind_OneTwo)
   or (sceneActID == btnScnActOff + btnKind_OneTwo) ) then         ----------
   
   if ( fibaro:getGlobalValue("nightMode") == "0" ) then
-    fibaro:setGlobal("nightMode_skipBR", "1");
+    fibaro:setGlobal("nightMode_skipSR", "1");
     fibaro:setGlobal("nightMode", "1");
   else
     fibaro:setGlobal("nightMode", "0");
