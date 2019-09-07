@@ -3,6 +3,7 @@
 35 value
 %% globals
 --]]
+
 --58 value
 
 
@@ -12,7 +13,7 @@ local debugMode = false;
 
 -- Devices ID's
 
-local doorToilet_ID = 58;
+local doorToilet_ID = 375;
 local TBL_Rgbw_T_ID = 35;
 local TB_vent_ID = 12;
 

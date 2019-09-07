@@ -1,15 +1,24 @@
 --[[
 %% properties
-166 sceneActivation
+167 sceneActivation
 %% globals
 --]]
 
 
 -- CONSTS --
 
-local buttonID = 166;
+local buttonID = 167;
 
-local bedIsDownID = 205;
+local bedIsDownID     = 205;
+
+local vdLightHllID        = 207;
+local vdLightHllSwitchBtn = "5";
+
+local plugBedID = 15;
+
+local lightValFullOn = "1";
+local lightValFOrNOn = "101"; -- full or night val
+local lightValHOrNOn = "151"; -- half or night val - used for Hall
 
 -- button/BinSens scnActs codes
 local btnScnActOn        = 10; -- toggle switch only
@@ -20,14 +29,14 @@ local btnScnActTrplClick = 15;
 local btnScnActHold      = 12; -- momentary switch only
 local btnScnActRelease   = 13; -- momentary switch only
 
-local btnKind_OneTwo     = 0; -- use 0 for 1st channel or 10 for 2nd channel
+local btnKind_OneTwo     = 10; -- use 0 for FIRST channel or 10 for SECOND channel
 
-local debugMode = true;
+local debugMode = false;
 
 
 -- GET ENVS --
 
-fibaro:sleep(50); -- to prevent to kill all instances
+fibaro:sleep(50); -- to prevent kill all instances
 if ( fibaro:countScenes() > 1 ) then
   if ( debugMode ) then fibaro:debug("Double start"
     .. "(" .. tostring(fibaro:countScenes()) .. ").. Abort dup!"); end
@@ -43,18 +52,14 @@ end
 
 local sceneActID = tonumber(fibaro:getValue(buttonID, "sceneActivation"));
 
-local bedIsDown = tonumber(fibaro:getValue(bedIsDownID, "value"));
-
 if ( debugMode ) then
   fibaro:debug(
   	"sceneActID = " .. tostring(sceneActID) .. ", "
-    .. "btnID = " .. scrTrigger['deviceID'] .. ", "
-  	.. "btnValue = " .. fibaro:getValue(buttonID, "value") .. ", "
-    .. "bedIsDown = " .. tostring(bedIsDown)
+  	.. "btnValue = " .. fibaro:getValue(buttonID, "value")
   );
-end
+end;
 
-if ( bedIsDown == 0 ) then
+if ( fibaro:getValue(205, "value") == "0" ) then
   if ( debugMode ) then fibaro:debug("Bed is closed.. Abort!"); end
   fibaro:abort();
 end
@@ -65,26 +70,41 @@ if ( ((btnKind_OneTwo == 0) and (sceneActID >= 20))
   fibaro:abort();
 end
 
+local bedIsDown    = tonumber(fibaro:getValue(bedIsDownID, "value"));
+
+if ( debugMode ) then
+  fibaro:debug(
+  	"bedIsDown = " .. tostring(bedIsDown)
+  );
+end
 
 -- PROCESS --
   
 if ( (sceneActID == btnScnActClick + btnKind_OneTwo)
   or (sceneActID == btnScnActOn + btnKind_OneTwo)
-  or (sceneActID == btnScnActOff + btnKind_OneTwo) ) then         ----------
+  or (sceneActID == btnScnActOff + btnKind_OneTwo) ) then         -------------
   
-  if ( fibaro:getGlobalValue("nightMode") == "0" ) then
-    fibaro:setGlobal("nightMode_skipSR", "1");
-    fibaro:setGlobal("nightMode", "1");
+  fibaro:call(vdLightHllID, "pressButton", vdLightHllSwitchBtn);
+  
+  if ( fibaro:getValue(plugBedID, "value") == "0" ) then
+    fibaro:call(plugBedID, "turnOn");
   else
-    fibaro:setGlobal("nightMode", "0");
+    fibaro:call(plugBedID, "turnOff");
   end
   
-elseif ( sceneActID == btnScnActDblClick + btnKind_OneTwo ) then  ----------
+elseif ( sceneActID == btnScnActDblClick + btnKind_OneTwo ) then  -------------
   
-  fibaro:setGlobal("nightMode", "1");
+  --[[  
+  if ( debugMode ) then
+    fibaro:debug("lightsActions = <" .. lightsActions .. ">");
+  end
   
-elseif ( sceneActID == btnScnActTrplClick + btnKind_OneTwo ) then ----------
+  fibaro:setGlobal("lightsQueue", fibaro:getGlobalValue("lightsQueue")
+    .. lightsActions);
+  --]]
   
-  fibaro:setGlobal("nightMode", "0");
+elseif ( sceneActID == btnScnActTrplClick + btnKind_OneTwo ) then -------------
+  
+  
   
 end

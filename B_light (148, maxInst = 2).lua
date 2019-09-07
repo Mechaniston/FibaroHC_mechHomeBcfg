@@ -1,7 +1,7 @@
 --[[
 %% properties
 36 value
-307 value
+378 value
 %% globals
 --]]
 
@@ -16,18 +16,22 @@ In "VarMode" (armedMode == false) you need have the global var!
 
 -- CONSTS
 
--- Devices ID's
-local doorID = 307;
-local lightID = 36;
-
--- Time to enter (in sec), longer time will detect as another situation, like cleaning
-local timeToEnter = 10;
-
-local nightModeLevel = "1";
-
-local armedMode = false;
-
 local debugMode = false;
+
+-- Devices ID's
+local doorID = 378;
+local lightID = 36;
+local buttonID = 319;
+
+-- Time to enter (in sec), longer time will detect as another situation,
+-- like cleaning
+local timeToEnter = 15;
+
+local nightModeLevel = "10";
+
+-- spec. code, only for my installation
+-- Attention! This MODE must be SYNCHRONIZED with scene.HK_button24_B!
+local armedMode = false;
 
 
 -- GETENV
@@ -43,15 +47,30 @@ else
   isFlag, isFlagMT = fibaro:getGlobal("bathroomIsBusy");
 end
 
-if ( debugMode ) then fibaro:debug("Flag in <" .. isFlag .. "> (MT = " .. isFlagMT .. ")"); end
+if ( debugMode ) then
+  fibaro:debug("Flag in <" .. isFlag .. "> (MT = " .. isFlagMT .. ")");
+end
 
 local trigger = fibaro:getSourceTrigger();
 local light = fibaro:getValue(lightID, "value");
 
-if ( debugMode ) then fibaro:debug("Current Light value = <" .. light .. ">"); end
+if ( debugMode ) then
+  fibaro:debug("Current Light value = <" .. light .. ">");
+end
+
+local btn, btnMT = fibaro:get(buttonID, "value");
+
+if ( os.time() - btnMT <= 5 ) then
+  if ( debugMode ) then
+    fibaro:debug("Manual button was pressed, exit");
+  end
+  
+  return
+end
 
 
 -- SUBFUNCS
+-- Must be SYNCHRONIZED with scene.HK_button24_B!
 
 function setFlag(flag)
   
@@ -71,7 +90,8 @@ function setFlag(flag)
     
     if ( debugMode ) then
       local isArmed, isArmedMT = fibaro:get(doorID, "armed");
-      fibaro:debug("Set <armed> status for bathroom door sensor in <" .. flag .. "> (value = " .. isArmed .. ", MT = " .. isArmedMT .. ")");
+      fibaro:debug("Set <armed> status for bathroom door sensor in <"
+        .. flag .. "> (value = " .. isArmed .. ", MT = " .. isArmedMT .. ")");
     end
     
   else
@@ -90,7 +110,8 @@ function setFlag(flag)
     
     if ( debugMode ) then
       local isBusy, isBusyMT = fibaro:getGlobal("bathroomIsBusy");
-      fibaro:debug("Set global var <bathroomIsBusy> in <" .. flag .. "> (value = " .. isBusy .. ", MT = " .. isBusyMT .. ")");
+      fibaro:debug("Set global var <bathroomIsBusy> in <"
+        .. flag .. "> (value = " .. isBusy .. ", MT = " .. isBusyMT .. ")");
     end
     
   end
@@ -102,7 +123,7 @@ end
 
 if ( fibaro:countScenes() > 1 ) then
   
-  if ( debugMode ) then fibaro:debug("Second scene!"); end
+  if ( debugMode ) then fibaro:debug("Second scene! Skip.."); end
   --fibaro:abort();
   
 elseif ( trigger['type'] == "property" ) then
@@ -116,7 +137,7 @@ elseif ( trigger['type'] == "property" ) then
       
       if ( isFlag == "0" ) then
 	      
-        local val = "100";
+        local val = "99";
         if ( fibaro:getGlobalValue("nightMode") == "1" ) then
           -- Special code! Only for my installation!
           val = fibaro:getValue(148, "value"); -- HKL_all
@@ -124,10 +145,24 @@ elseif ( trigger['type'] == "property" ) then
           --
             val = nightModeLevel;
           end
+        else
+          fibaro:call(368, "turnOn"); -- spec.code
         end
         
         fibaro:call(lightID, "setValue", val);
-        
+        --[[local val_ = "";
+        if ( tonumber(val) < 10 ) then
+          val_ = "0" .. val;
+        elseif ( tonumber(val) > 99 ) then
+          val_ = "99";
+        else
+          val_ = val;
+        end
+          
+        fibaro:setGlobal("lightsDimming", "0+" .. val_ .. "01" .. "0010"
+          .. "0" .. tostring(lightID));
+        fibaro:startScene(261);
+        --]]
         setFlag("0");
         	
         if ( debugMode ) then fibaro:debug("Light ON (" .. val .. ")!"); end
@@ -140,18 +175,23 @@ elseif ( trigger['type'] == "property" ) then
         
         fibaro:debug("Door closed..");
         
-        fibaro:debug("Flag = " .. isFlag .. "; os.t() = " .. os.time()
-          .. "; isFlagMT = " .. isFlagMT .. "; diff = " .. os.time() - isFlagMT);
+        fibaro:debug("Flag = " .. isFlag
+          .. "; os.t() = " .. os.time()
+          .. "; isFlagMT = " .. isFlagMT
+          .. "; diff = " .. os.time() - isFlagMT);
         
       end
       
       if ( (isFlag == "1") or ((os.time() - isFlagMT) >= timeToEnter) ) then
         
         fibaro:call(lightID, "turnOff");
+        fibaro:call(368, "turnOff"); -- spec.code
         
         setFlag("0");
         
-        if ( debugMode ) then fibaro:debug("The light turn off - the room is empty"); end
+        if ( debugMode ) then
+          fibaro:debug("The light turn off - the room is empty");
+        end
         
       else
             
@@ -165,7 +205,8 @@ elseif ( trigger['type'] == "property" ) then
     
   -- light manual
   elseif ( (tonumber(trigger['deviceID']) == lightID)
-    and (os.time() - isFlagMT > 4) ) then -- to prevent the action on self-call event
+    and (os.time() - isFlagMT > 4) ) then -- to prevent the action on
+      -- self-call event
     
     if ( light == "0" ) then
       
@@ -192,3 +233,4 @@ elseif ( trigger['type'] == "property" ) then
   end
   
 end
+

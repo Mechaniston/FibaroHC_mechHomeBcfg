@@ -10,7 +10,7 @@ local vdLightHllSwitchBtn = "5";
 
 local startSource = fibaro:getSourceTrigger();
 
-local intDoorVal, intDoorMT = fibaro:get(248, "value");
+local intDoorVal, intDoorMT = fibaro:get(372, "value");
 local extDoorVal, extDoorMT = fibaro:get(187, "value");
 
 if (
@@ -31,9 +31,9 @@ if (
   
   --[[
   local isLightInRoom = -- simple sleep detection
-    ( tonumber(fibaro:getValue(40, "value")) > 0 ) -- ctrlBigRoom:‘ветЋснЋбщ
-  --  or ( tonumber(fibaro:getValue(228, "value")) > 0 ) -- ЃЉ:“прђозетка (- бра напол.)
-    or ( tonumber(fibaro:getValue(230, "value")) > 0 ) -- ЃЉ:Ѓра(настен.)
+    ( tonumber(fibaro:getValue(40, "value")) > 0 ) -- ctrlBigRoom:СветОснОбщ
+  --  or ( tonumber(fibaro:getValue(228, "value")) > 0 ) -- БК:УпрРозетка (- бра напол.)
+    or ( tonumber(fibaro:getValue(230, "value")) > 0 ) -- БК:Бра(настен.)
   
   if not isLightInRoom then
     fibaro:setGlobal("lightsQueue", fibaro:getGlobalValue("lightsQueue")

@@ -4,34 +4,42 @@
 %% globals
 --]]
 
-local debugMode = true;
+
+-- CONSTS
+
+local debugMode = false;
 
 local vdLightKtnID        = 196;
 local vdLightKtnSwitchBtn = "5";
 local vdLightHllID        = 207;
 local vdLightHllSwitchBtn = "5";
 
+local powerID = 6;
+
+
+-- GET ENVS
+
 local startSource = fibaro:getSourceTrigger();
 
-local inDoorState, inDoorDT = fibaro:get(248, "value"); -- К:ДверьВнутр
-local hallSensState, hallSensDT = fibaro:get(236, "value"); -- К:Сенсор
-local hallLux = fibaro:getValue(296, "value"); -- К:Освещенность
+local inDoorState, inDoorDT = fibaro:get(372, "value");
+local hallSensState, hallSensDT = fibaro:get(236, "value");
+local hallLux = fibaro:getValue(296, "value");
 
 local isLightInRoom = false;
 if ( -- simple sleep detection
-  (tonumber(fibaro:getValue(40, "value")) > 0) -- ctrlBigRoom:СветОснОбщ
---  or ( tonumber(fibaro:getValue(228, "value")) > 0 ) -- БК:УпрРозетка
+  (tonumber(fibaro:getValue(40, "value")) > 0) -- BRlight_all
+--  or ( tonumber(fibaro:getValue(228, "value")) > 0 ) -- BRplug_light
 --  (- бра напол.)
-  or (tonumber(fibaro:getValue(230, "value")) > 0) -- БК:Бра(настен.)
+-- or (tonumber(fibaro:getValue(230, "value")) > 0) -- BRlightOnWall
   ) then
   isLightInRoom = true;
 end
 
-local currentTime = os.date("*t"); -- CAUTION! UTC+4
+local currentTime = os.date("*t");
 local twilightMode = false;
 if ( fibaro:getGlobalValue("twilightMode") == "0" ) then
-  if ( (currentTime.hour < 10) or (currentTime.hour > 21) ) then
-    -- 0..8 + 21..24
+  if ( (currentTime.hour < 9) or (currentTime.hour > 21) ) then
+    -- 0..8 + 22..24
     twilightMode = true;
   end
 else
@@ -46,12 +54,15 @@ if ( debugMode ) then
     .. ", isLightInRoom = " .. tostring(isLightInRoom));
 end
 
+
+-- PROCESS
+
 if (
-  ( --(tonumber(hallSensState) > 0) and
-    (tonumber(hallLux) < 70) )
-  -- Warning! The Hall Lux Value (70) must be at least more or equal
-  -- lighting in hall after this script the lights on for prevent
-  -- duplicate call
+  ( (tonumber(hallSensState) > 0) and
+    (tonumber(hallLux) <= 8) )
+  -- Warning! The Hall Lux Value (8) must be at least more or equal
+  -- lighting in the hall after this script the lights on
+  -- for prevent duplicate call
   or ( startSource["type"] == "other" )
   ) then
   
@@ -64,14 +75,24 @@ if (
     
     if ( debugMode ) then fibaro:debug("Somebody coming!"); end
     
-    if ( (fibaro:getValue(150, "value") == "0")
-        or (fibaro:getValue(150, "dead") >= "1") ) then
+    --[[
+    if ( (fibaro:getValue(150, "value") == "0") -- Hlight_ent
+        --or (fibaro:getValue(150, "dead") ~= "0") ) then
+        and fibaro:getValue(359, "value") == "0" -- KlightAux_1
+        and fibaro:getValue(360, "value") == "0" -- KlightAux_2
+        ) then -- Klight
       
-      if ( debugMode ) then fibaro:debug("No entrance light. Switch HallLight ON!"); end
+      if ( debugMode ) then fibaro:debug("Entrance light is OFF. Switch light ON!"); end
       
-      fibaro:call(vdLightHllID, "pressButton", vdLightHllSwitchBtn);
+      if ( twilightMode and not isLightInRoom ) then
+        fibaro:call(vdLightKtnID, "pressButton", vdLightKtnSwitchBtn);
+      else
+        fibaro:call(vdLightHllID, "pressButton", vdLightHllSwitchBtn);
+      end
       
     end
+    --]]
+    
     --[[
     if not isLightInRoom then
       local currentTime = os.date("*t");
@@ -92,14 +113,15 @@ if (
       end
     end
     --]]
+    
     --fibaro:call(59, "sendPhotoToUser", "52");
-    fibaro:call(59, "sendPhotoToEmail", "m@mech.tel");
+    fibaro:call(334, "sendPhotoToEmail", "m@mech.tel");
     
   else
     
     if ( debugMode ) then fibaro:debug("Movement in hall detected!"); end
     
-    if ( tonumber(fibaro:getValue(4, "value")) > 0 ) then -- Общее:ПитаниеСвета
+    if ( tonumber(fibaro:getValue(powerID, "value")) > 0 ) then -- Общее:ПитаниеСвета
       
       if --( (not twilightMode) or isLightInRoom ) then -- 4 wife pleasure, again :(((
         ( isLightInRoom ) then
@@ -120,7 +142,7 @@ if (
           end
           
           local startTime = os.time();
-          while ( os.time() - startTime < 300 ) do
+          while ( os.time() - startTime < 180 ) do
             if ( tonumber(fibaro:getValue(236, "value")) > 0 ) then -- К:Сенсор
               startTime = os.time();
             end

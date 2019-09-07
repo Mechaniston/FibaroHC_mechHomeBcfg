@@ -1,0 +1,7 @@
+Needful global variables:
+
+RTtvMode
+TVkitchenMode
+TVkitchenLastMode
+HDMIswAvlSrc (exmpl. 9110110)
+HDMIswitchMode (exmpl. 21010)

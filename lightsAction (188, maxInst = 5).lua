@@ -7,9 +7,9 @@ lightsQueue
 
 -- CONST
 
-local powerID = 4; -- Туалет:БП ACDC 24В
-
 local debugMode = true;
+
+local powerID = 6;
 
 
 -- RGBW DEVICE SUPPORT
@@ -22,20 +22,22 @@ function getTheColor(devID, clrIndex)
   
   for value in string.gmatch(colors, "(%d+)") do
     if ( i == clrIndex ) then
-      return value;
+      return tonumber(value);
     end
     --RGBWTable[i] = value;
     i = i + 1;
   end
   
   --return RGBWTable[clrIndex];
+  return 0;
+  
 end
 
 function setTheColor(devID, clrIndex, oldValue, newValue)
   
   --[[ -- disable the check because fails sometimes
   if ( (newValue == 0) and (oldValue == 0) ) 
-    or ( (newValue > 0) and (oldValue > 0) ) then
+      or ( (newValue > 0) and (oldValue > 0) ) then
     return;
   end
   --]]
@@ -62,13 +64,12 @@ end
 -- GET ENVS
 
 fibaro:sleep(50); -- to prevent to kill all instances
-if ( fibaro:countScenes() > 1 )
-  then
-  if ( debugMode )
-    then
+if ( fibaro:countScenes() > 1 ) then
+  if ( debugMode ) then
     fibaro:debug("Double start (" ..
   	  tostring(fibaro:countScenes()) .. ").. Abort dup!");
-    end
+  end
+  
   fibaro:abort();
 end
 --local trigger = fibaro:getSourceTrigger();
@@ -76,34 +77,41 @@ end
 local powerValue = fibaro:getValue(powerID, "value");
 
 local nightMode = false;
-if ( fibaro:getGlobalValue("nightMode") == "1" )
-  then
-  nightMode = true;
+if ( fibaro:getGlobalValue("nightMode") == "1" ) then
   if ( debugMode ) then fibaro:debug("_nightMode detected"); end
+  
+  nightMode = true;
 end
 
 
 -- PREINIT QUEUE
 
-local lightsQueue = fibaro:getGlobalValue("lightsQueue");
+local lightsQueue = string.gsub(fibaro:getGlobalValue("lightsQueue"),
+  "NaN", ""); -- removes the empty value string representation of the glob.var
 local lightActionPos = string.find(lightsQueue, ";");
 
 
 -- QUEUE
 
-if ( debugMode ) then fibaro:debug("_lightsQueue = <" .. lightsQueue .. ">"); end
+if ( debugMode ) then
+  fibaro:debug("GET lightsQueue = '" .. lightsQueue .. "'");
+end
 
 while ( lightActionPos ~= nil ) do
   
   -- GET ACTION INFO
   
-  if ( debugMode ) then fibaro:debug("FOUND lightAction, end.pos = " .. tostring(lightActionPos)); end
+  if ( debugMode ) then
+    fibaro:debug("FOUND lightAction, end.pos = " .. tostring(lightActionPos));
+  end
   
   local lightAction = string.sub(lightsQueue, 1, lightActionPos);
   
-  fibaro:setGlobal("lightsQueue", string.sub(lightsQueue, lightActionPos + 1));
+  if ( debugMode ) then
+    fibaro:debug("READ lightAction = '" .. lightAction .. "'");
+  end
   
-  if ( debugMode ) then fibaro:debug("GET lightAction = <" .. lightAction .. ">"); end
+  fibaro:setGlobal("lightsQueue", string.sub(lightsQueue, lightActionPos + 1));
   
   local nodeID = string.sub(lightAction, 1, string.find(lightAction, ",") - 1);
   
@@ -136,17 +144,17 @@ while ( lightActionPos ~= nil ) do
   local nodeValue = tonumber(string.sub(lightAction, 1,
     string.find(lightAction, ";") - 1));
   
-  local nodeName = "<" .. fibaro:getRoomNameByDeviceID(nodeID) .. ":"
+  local nodeName = "[" .. fibaro:getRoomNameByDeviceID(nodeID) .. ":"
     .. fibaro:getName(nodeID);
   
   if ( subNodeClrIndex ~= 0 ) then
     nodeName = nodeName .. " #ch." .. subNodeClrIndex
     .. "-" .. lastSymbInNodeID;
     
-    curNodeValue = subCurNodeValue .. "(" .. curNodeValue .. ")";
+    curNodeValue = subCurNodeValue .. " (" .. curNodeValue .. ")";
   end
   
-  nodeName = nodeName .. ">";
+  nodeName = nodeName .. "]";
     
   if ( debugMode ) then
     fibaro:debug("Node: #" .. nodeID .. " " .. nodeName
@@ -157,18 +165,17 @@ while ( lightActionPos ~= nil ) do
   
   -- PROCESS ACTION
     
-  if ( nodeValue == -1 )
-    then
+  if ( nodeValue == -1 ) then
     -- TURN OFF --
     
     --if ( curNodeValue > 0 ) -- disable the check because fails sometimes
     --  then
-    if ( debugMode ) then fibaro:debug("TURING OFF " .. nodeName); end
+    if ( debugMode ) then fibaro:debug("Turning OFF " .. nodeName); end
     
     fibaro:call(nodeID, "turnOff");
     --end
-  elseif ( nodeValue == 0 )
-    then
+    
+  elseif ( nodeValue == 0 ) then
     -- TURN OFF BY SET ZERO VALUE --
     
     if ( debugMode ) then fibaro:debug("Setting to ZERO " .. nodeName); end
@@ -181,21 +188,25 @@ while ( lightActionPos ~= nil ) do
       fibaro:call(nodeID, "setValue", 0);
       --end
     end
+    
   else
     -- TURN ON --
     
     --- Check PowerSource ---
-    if ( powerValue == "0" )
-      then
-      if ( debugMode ) then fibaro:debug("PowerSource is OFF! Turning ON"); end
+    if ( powerValue == "0" ) then
+      if ( debugMode ) then
+        fibaro:debug("PowerSource is OFF! Turning ON..");
+      end
       
       fibaro:call(powerID, "turnOn");
       fibaro:sleep(3 * 1000);
       
       powerValue = fibaro:getValue(powerID, "value");
-      if ( powerValue == "0" )
-        then
-        if ( debugMode ) then fibaro:debug("PowerSource turning on was FAIL!"); end
+      if ( powerValue == "0" ) then
+        if ( debugMode ) then
+          fibaro:debug("PowerSource turning on was FAIL!");
+        end
+        
         break;
       end
     else
@@ -203,9 +214,8 @@ while ( lightActionPos ~= nil ) do
     end
     
     --- Wakeup devices ---
-    if ( fibaro:getValue(nodeID, "dead") >= "1" )
-      then
-      if ( debugMode ) then fibaro:debug("Waking UP DEAD " .. nodeName); end
+    if ( fibaro:getValue(nodeID, "dead") >= "1" ) then
+      if ( debugMode ) then fibaro:debug("Waking UP dead " .. nodeName); end
       
       fibaro:wakeUpDeadDevice(nodeID);
       --new code for HC2 v4+:
@@ -214,10 +224,8 @@ while ( lightActionPos ~= nil ) do
       fibaro:sleep(2 * 1000);
     end
     
-    if ( nodeValue > 100 )
-    then
-      if ( nightMode == true )
-      then
+    if ( nodeValue > 100 ) then
+      if ( nightMode == true ) then
         nodeValue = 1;
       else
         nodeValue = nodeValue - 100;
@@ -233,28 +241,32 @@ while ( lightActionPos ~= nil ) do
       else
         fibaro:call(nodeID, "turnOn");
       end
+      
     elseif ( nodeValue == 99 ) then
       -- FULL ON
-      if ( debugMode ) then fibaro:debug("Setting FULL on " .. nodeName); end
+      if ( debugMode ) then fibaro:debug("Setting to FULL " .. nodeName); end
       
       if ( subNodeClrIndex ~= 0 ) then
         setTheColor(nodeID, subNodeClrIndex, subCurNodeValue, 100);
       else
         fibaro:call(nodeID, "setValue", 100);
       end
+      
     elseif ( nodeValue <= 3 ) then
       -- MIN
-      if ( debugMode ) then fibaro:debug("Setting MIN on " .. nodeName); end
+      if ( debugMode ) then fibaro:debug("Setting to MIN " .. nodeName); end
       
-      if ( subNodeClrIndex ~= 0 )
-        then
+      if ( subNodeClrIndex ~= 0 ) then
         setTheColor(nodeID, subNodeClrIndex, subCurNodeValue, 1);
       else
         fibaro:call(nodeID, "setValue", 1);
       end
+      
     else
       -- EXACT VALUE
-      if ( debugMode ) then fibaro:debug("Setting VALUE [" .. nodeValue .. "] on " .. nodeName); end
+      if ( debugMode ) then
+        fibaro:debug("Setting to VALUE [" .. nodeValue .. "] " .. nodeName);
+      end
       
       if ( subNodeClrIndex ~= 0 ) then
         setTheColor(nodeID, subNodeClrIndex, subCurNodeValue, nodeValue);
@@ -262,15 +274,20 @@ while ( lightActionPos ~= nil ) do
         fibaro:call(nodeID, "setValue", nodeValue);
       end
     end
-      
+    
   end -- if ( nodeValue ... )
 
   -- REINIT QUEUE
   
-  lightsQueue = fibaro:getGlobalValue("lightsQueue");
+  lightsQueue = string.gsub(fibaro:getGlobalValue("lightsQueue"),
+    "NaN", ""); -- removes the empty value string representation of the glob.var
   lightActionPos = string.find(lightsQueue, ";");
   
-  if ( debugMode ) then fibaro:debug("__lightsQueue = <" .. lightsQueue .. ">"); end
+  if ( debugMode ) then
+    fibaro:debug("_lightsQueue = '" .. lightsQueue .. "'");
+  end
 end
 
-fibaro:setGlobal("lightsQueue", ""); -- clear queue
+if ( debugMode ) then fibaro:debug("CLEAR lightsQueue and exit"); end
+
+fibaro:setGlobal("lightsQueue", "");

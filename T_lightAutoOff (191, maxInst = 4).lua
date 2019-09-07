@@ -1,18 +1,18 @@
 --[[
 %% properties
 35 value
-58 value
+375 value
 %% globals
 --]]
 
 
 -- CONSTS
 
--- Devices ID's
-local doorID = 58;
-local lightID = 35;
+local debugMode = true;
 
-local debugMode = false;
+-- Devices ID's
+local doorID = 375;
+local lightID = 35;
 
 
 -- GETENV
@@ -30,15 +30,16 @@ end
 
 -- PROCESS
 
-if ( fibaro:countScenes() > 2 ) then
+if ( fibaro:countScenes() > 1 ) then
   
-  if ( debugMode ) then fibaro:debug("Second scene!"); end
+  if ( debugMode ) then fibaro:debug("Second scene! Skip.."); end
   --fibaro:abort();
   
 elseif ( (tonumber(door) > 0) and (tonumber(light) > 0)
   and (
     (srcDevice ~= tostring(lightID)) -- to prevent action
-      and (lightMT - doorMT <= 4) -- on manual changing light value
+      and ((lightMT - doorMT <= 4) -- on manual changing light value
+        or (lightMT - doorMT > 5 * 60)) -- but skip this check by timeout
     ) ) then
   
   if ( debugMode ) then
@@ -47,9 +48,9 @@ elseif ( (tonumber(door) > 0) and (tonumber(light) > 0)
   
   local startTime = os.time();
   
-  while ( (tonumber(fibaro:getValue(doorID, "value")) > 0)
-    and (tonumber(fibaro:getValue(lightID, "value")) > 0)
-    and (os.time() - startTime <= 5 * 60) ) do
+  while ( (fibaro:getValue(doorID, "value") == door)
+      and (fibaro:getValue(lightID, "value") == light)
+      and (os.time() - startTime <= 5 * 60) ) do
     
     fibaro:sleep(1500);
     
@@ -60,8 +61,8 @@ elseif ( (tonumber(door) > 0) and (tonumber(light) > 0)
       fibaro:debug("Timeout or the door was closed or the light was turned off");
     end
     
-    if ( (tonumber(fibaro:getValue(doorID, "value")) > 0)
-      and (tonumber(fibaro:getValue(lightID, "value")) > 0) ) then
+    if ( (fibaro:getValue(doorID, "value") == door)
+        and (fibaro:getValue(lightID, "value") == light) ) then
       
       if ( debugMode ) then
         fibaro:debug("The door still opened and the light turned on yet. TURN OFF!");

@@ -4,6 +4,7 @@
 nightMode
 --]]
 
+
 --[[
 --if ( fibaro:getSourceTrigger()["type"] == "other" ) then
   if ( fibaro:getGlobalValue("nightMode") == "1" )
@@ -27,29 +28,18 @@ if ( fibaro:getGlobalValue("nightMode") == "1" ) then
   fibaro:call(175, "turnOff"); 		-- Коридор:ТеплПол-Т_В
   
   fibaro:call(177, "turnOff"); 		-- Лоджия
-  
-  fibaro:call(171, "turnOff"); 		-- Коридор:СветДекорВерх
 
   if ( fibaro:getGlobalValue("nightMode_skipBR") ~= "1" ) then
-    fibaro:call(169, "turnOff"); 	-- БК:СветДекорВитрина
-  end
-  fibaro:call(18, "turnOff"); 		-- БК:СветДекор
-  
-  fibaro:call(148, "turnOff"); 		-- HKL_all
-  
-  if ( fibaro:getGlobalValue("nightMode_skipSR") ~= "1" ) then
-    fibaro:call(266, "turnOff"); 	-- МК:СветДоп
-    fibaro:call(260, "turnOff"); 	-- SRL_all
-  else
-    fibaro:setGlobal("nightMode_skipSR", "0");
-  end
-  
-  if ( fibaro:getGlobalValue("nightMode_skipBR") ~= "1" ) then
     
-    fibaro:call(228, "turnOff"); 	-- БК:УпрРозетка
-    fibaro:call(230, "turnOff"); 	-- БК:Бра
-    fibaro:call(169, "turnOff"); 	-- БК:СветДоп
-    fibaro:call(40, "turnOff"); 	-- BRL_all
+	fibaro:call(210, "turnOff"); -- БК:СветДоп
+    --fibaro:call(228, "turnOff"); -- БК:УпрРозетка
+    fibaro:call(230, "turnOff"); -- БК:Бра
+    
+    --fibaro:call(40, "turnOff"); 	-- BRL_all
+    fibaro:call(41, "turnOff");
+    fibaro:call(42, "turnOff");
+    fibaro:call(43, "turnOff");
+    fibaro:call(44, "turnOff");
     
     --fibaro:call(189, "pressButton", "4"); 	-- БК:Жалюзи_ЗАКР
     
@@ -84,6 +74,25 @@ if ( fibaro:getGlobalValue("nightMode") == "1" ) then
   else
     fibaro:setGlobal("nightMode_skipBR", "0");
   end
+  
+  if ( fibaro:getGlobalValue("nightMode_skipSR") ~= "1" ) then
+    
+    --fibaro:call(260, "turnOff"); 	-- SRL_all
+    fibaro:call(261, "turnOff");
+    fibaro:call(262, "turnOff");
+    
+    fibaro:call(266, "turnOff"); 	-- МК:СветДоп
+    
+  else
+    fibaro:setGlobal("nightMode_skipSR", "0");
+  end
+  
+  fibaro:call(18, "turnOff"); 		-- БК:СветДекор
+  
+  --fibaro:call(148, "turnOff"); 		-- HKL_all
+  fibaro:call(150, "turnOff");
+  fibaro:call(149, "turnOff");
+  fibaro:call(151, "turnOff");
   
   --[[
   fibaro:call(4, "turnOff"); -- Общее:ПитаниеСвета(Т)

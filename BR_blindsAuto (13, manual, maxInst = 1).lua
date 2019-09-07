@@ -23,14 +23,14 @@ while true do
   
   local timeToMoveBlinds = false;
   
-  fibaro:debug(currentTime.hour); -- CAUTION!! +4UTC
+  fibaro:debug(currentTime.hour);
   fibaro:debug(currentTime.wday);
   if 
     ( (fibaro:getValue(42, "value") ~= "0")
       and (fibaro:getValue(42, "dead") == "0")
   	  and (fibaro:getGlobalValue("twilightMode") == "1") )
     or
-    ( currentTime.hour >= 22 ) then
+    ( currentTime.hour >= 20 ) then
     
     if ( debugMode ) then
       fibaro:debug(fibaro:getGlobalValue("blindsMidPos"));
@@ -55,9 +55,9 @@ while true do
       timeToMoveBlinds = true;
     end
     
-  elseif ( (currentTime.hour > 8) and (currentTime.hour < 18)
-    and (currentTime.wday ~= 6) and (currentTime.wday ~= 1) )
-    or ( (currentTime.hour > 13 ) and (currentTime.hour < 18)
+  elseif ( (currentTime.hour >= 9) and (currentTime.hour < 18)
+      and (currentTime.wday == 1) and (currentTime.wday == 7) )
+    or ( (currentTime.hour >= 13 ) and (currentTime.hour < 18)
       and (currentTime.wday > 1) and ( currentTime.wday < 7) ) then
     
     if ( tonumber(fibaro:getGlobalValue("blindsMidPos")) < tonumber("50") )
@@ -82,12 +82,12 @@ while true do
     fibaro:startScene(200);
     --fibaro:call(189, "pressButton", "3");
     
-    if ( currentTime.hour >= 22 ) then
+    if ( currentTime.hour >= 20 ) then
+      fibaro:debug("Long sleep (12 hrs)..");
+      fibaro:sleep(12 * 60 * 60 * 1000);
+    elseif ( currentTime.hour <= 13 ) then
       fibaro:debug("Long sleep (7 hrs)..");
       fibaro:sleep(7 * 60 * 60 * 1000);
-    elseif ( currentTime.hour < 9 ) then
-      fibaro:debug("Long sleep (11 hrs)..");
-      fibaro:sleep(11 * 60 * 60 * 1000);
     end
   end
 

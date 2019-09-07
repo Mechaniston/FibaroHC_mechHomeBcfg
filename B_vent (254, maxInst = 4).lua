@@ -8,10 +8,10 @@
 
 -- CONSTS
 
-local debugMode = true;
+local debugMode = false;
 
 -- Devices ID's
-local doorBath_ID = 307;
+local doorBath_ID = 378;
 local TBL_rGbw_B_ID = 36;
 local TB_vent_ID = 12;
 

@@ -1,20 +1,24 @@
 --[[
 %% properties
 187 value
-248 value
+372 value
 %% globals
 --]]
 
 
 -- CONSTS --
 
-local doorIntID = 248;
+local debugMode = false;
+
+local doorIntID = 372;
 local doorExtID = 187;
+
+local doorLightID = 286;
+
+local userForDoorNotifID = 334;
 
 local IntDoorNotClosedNotif = "Закройте внутренюю входную дверь, пожалуйста!";
 local ExtDoorNotClosedNotif = "Закройте внешнюю входную дверь, пожалуйста!";
-
-local debugMode = true;
 
 
 -- GET ENVS --
@@ -31,6 +35,15 @@ local doorExtState, doorExtStateMT = fibaro:get(doorExtID, "value");
 
 local currentTime = os.date("*t");
 
+  if ( debugMode ) then
+    fibaro:debug("doorIntState = " .. doorIntState
+      .. ", doorIntStateMT = " .. doorIntStateMT
+      .. "; doorExtState = " .. doorExtState
+      .. ", doorExtStateMT = " .. doorExtStateMT
+      .. "; H = " .. tostring(currentTime.hour)
+      );
+  end
+
 
 -- PROCESS --
 
@@ -38,19 +51,19 @@ if ( (doorIntState == "0") and (doorExtState == "0") ) then -- all closed
   
   if ( debugMode ) then fibaro:debug("All doors were closed"); end
   
-  fibaro:call(286, "turnOff");
+  fibaro:call(doorLightID, "turnOff");
   
-  if ( (doorIntStateMT - doorExtStateMT  <= 2 * 60)
+  if ( (doorIntStateMT - doorExtStateMT  <= 300)
     and (doorIntStateMT - doorExtStateMT >= 0) ) then
     -- somebody settled in the home (incoming 4/4 !!!-> or welcoming 4/4)
     fibaro:call(2, "sendEmail", "MechFHC - doors control",
       "Somebody settled in the home");
     
     --fibaro:call(59, "sendPhotoToUser", "52");
-    fibaro:call(59, "sendPhotoToEmail", "v.pavlov@at.com.ru");
+    fibaro:call(userForDoorNotifID, "sendPhotoToEmail", "m@mech.tel");
     -- usually, nothing in cam already
     
-  elseif ( (doorExtStateMT - doorIntStateMT  <= 60)
+  elseif ( (doorExtStateMT - doorIntStateMT <= 300)
     and (doorExtStateMT - doorIntStateMT > 0) ) then
     -- somebody left the home (outgoing 4/4)
     fibaro:call(2, "sendEmail", "MechFHC - doors control",
@@ -67,10 +80,50 @@ if ( (doorIntState == "0") and (doorExtState == "0") ) then -- all closed
 elseif ( (doorIntState == "0") and (doorExtState == "1") ) then
   -- outgoing 3/4 or incoming 1/4
   
-  if ( debugMode ) then fibaro:debug("ExtDoor are opened and IntDoor are closed"); end
+  if ( debugMode ) then
+    fibaro:debug("ExtDoor are opened and IntDoor are closed");
+  end
   
-  if ( (currentTime.hour > 4) and (currentTime.hour < 21) ) then -- HARDCODED 6:00-21:00 (UTC +4 instead 3)
-    fibaro:call(286, "turnOn");
+  if ( (currentTime.hour > 7) and (currentTime.hour < 22) ) then
+    -- HARDCODED 8:00-21:00
+    --fibaro:call(331, "turnOff");
+    fibaro:call(doorLightID, "turnOn");
+  end
+  
+  if ( (doorExtStateMT > doorIntStateMT)
+      --and (fibaro:getValue(6, "value") == "0")
+      and (fibaro:getValue(147, "value") == "0") -- HKL_pwr
+      and (tonumber(fibaro:getValue(296, "value")) <= 10) ) then
+    
+    if ( debugMode ) then
+      fibaro:debug("Somebody is coming and we need autolighting!");
+    end
+    
+    --[[if ( fibaro:getGlobalValue("twilightMode") == "1" ) then
+      if ( debugMode ) then
+        fibaro:debug("Twilight is now..");
+      end--]]
+      
+      if ( (currentTime.hour > 7) and (currentTime.hour < 22) ) then
+        --fibaro:call(207, "pressButton", "5");
+      else
+        --[[
+        -- dont work, no bright reason :(
+        --fibaro:call(196, "pressButton", "5");
+        lightAction = "149,115;";
+        
+        fibaro:setGlobal("lightsQueue",
+          fibaro:getGlobalValue("lightsQueue")
+          .. lightAction);
+        ]]--
+        if ( fibaro:getValue(359, "value") == "0"
+            and fibaro:getValue(360, "value") == "0" ) then
+          fibaro:call(361, "pressButton", "2"); -- K_lightAux
+        end
+      end
+    
+    --end
+    
   end
   
 elseif ( (doorIntState == "1") and (doorExtState == "0") ) then
@@ -78,26 +131,28 @@ elseif ( (doorIntState == "1") and (doorExtState == "0") ) then
   
   if ( debugMode ) then fibaro:debug("IntDoor are opened and ExtDoor are closed"); end
   
-  if ( (currentTime.hour > 4) and (currentTime.hour < 21) ) then -- HARDCODED 6:00-21:00 (UTC +4 instead 3)
-    fibaro:call(286, "turnOn");
+  if ( (currentTime.hour > 7) and (currentTime.hour < 22) ) then
+    -- HARDCODED 8:00-21:00
+    --fibaro:call(331, "turnOff");
+    fibaro:call(doorLightID, "turnOn");
   end
   
   --fibaro:call(59, "sendPhotoToUser", "52");
-  fibaro:call(59, "sendPhotoToEmail", "mechanist@at.com.ru");
+  fibaro:call(userForDoorNotifID, "sendPhotoToEmail", "m@mech.tel");
   
 elseif ( (doorIntState == "1") and (doorExtState == "1") ) then
   
   if ( debugMode ) then fibaro:debug("All doors were opened"); end
   
-  fibaro:call(286, "turnOff");
+  fibaro:call(doorLightID, "turnOff");
   
-  if ( (doorExtStateMT - doorIntStateMT <= 60)
+  if ( (doorExtStateMT - doorIntStateMT <= 300)
       and (doorExtStateMT - doorIntStateMT >= 0) ) then
     -- somebody exited from the home (outgoing 2/4 or welcoming 2/4)
     fibaro:call(2, "sendEmail", "MechFHC - doors control",
       "Somebody exited from the home");
     
-  elseif ( (doorIntStateMT - doorExtStateMT <= 60)
+  elseif ( (doorIntStateMT - doorExtStateMT <= 300)
       and (doorIntStateMT - doorExtStateMT > 0) ) then
     -- sombody entered in the home (incoming 2/4)
     fibaro:call(2, "sendEmail", "MechFHC - doors control",
@@ -110,7 +165,7 @@ elseif ( (doorIntState == "1") and (doorExtState == "1") ) then
   end
   
   --fibaro:call(59, "sendPhotoToUser", "52");
-  fibaro:call(59, "sendPhotoToEmail", "mechanist@cla.su");
+  fibaro:call(userForDoorNotifID, "sendPhotoToEmail", "m@mech.tel");
   
 end
 
@@ -216,3 +271,4 @@ if ( (doorIntState == "1") or (doorExtState == "1") ) then
   end
   
 end
+
