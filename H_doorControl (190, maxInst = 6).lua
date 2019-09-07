@@ -1,7 +1,7 @@
 --[[
 %% properties
 187 value
-372 value
+383 value
 %% globals
 --]]
 
@@ -10,7 +10,7 @@
 
 local debugMode = false;
 
-local doorIntID = 372;
+local doorHallID = 383;
 local doorExtID = 187;
 
 local doorLightID = 286;
@@ -30,7 +30,7 @@ if ( fibaro:countScenes() > 1 )
   fibaro:abort();
 end--]]
 
-local doorIntState, doorIntStateMT = fibaro:get(doorIntID, "value");
+local doorIntState, doorIntStateMT = fibaro:get(doorHallID, "value");
 local doorExtState, doorExtStateMT = fibaro:get(doorExtID, "value");
 
 local currentTime = os.date("*t");
@@ -190,7 +190,7 @@ if ( (doorIntState == "1") or (doorExtState == "1") ) then
   local curTime = os.time();
   while ( (os.time() - curTime) < (2 * 60) ) do -- 2 min
     
-    if ( (fibaro:getValue(doorIntID, "value") == "0")
+    if ( (fibaro:getValue(doorHallID, "value") == "0")
       and (fibaro:getValue(doorExtID, "value") == "0") ) then
       
       if ( debugMode ) then
@@ -218,7 +218,7 @@ if ( (doorIntState == "1") or (doorExtState == "1") ) then
     
     isDoorsOpened = false;
     
-    if ( fibaro:getValue(doorIntID, "value") == "1" ) then
+    if ( fibaro:getValue(doorHallID, "value") == "1" ) then
       
       if ( debugMode ) then fibaro:debug("DoorInt is still OPENED!"); end
       
@@ -261,7 +261,7 @@ if ( (doorIntState == "1") or (doorExtState == "1") ) then
     fibaro:sleep(5 * 60 * 1000); -- 5 min delay between notifs.
   end
   
-  if ( (fibaro:getValue(doorIntID, "value") == "1")
+  if ( (fibaro:getValue(doorHallID, "value") == "1")
     or (fibaro:getValue(doorExtID, "value") == "1") ) then
     
     if ( debugMode ) then
@@ -271,4 +271,3 @@ if ( (doorIntState == "1") or (doorExtState == "1") ) then
   end
   
 end
-

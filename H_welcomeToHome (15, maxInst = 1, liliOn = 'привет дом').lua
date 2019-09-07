@@ -5,13 +5,28 @@
 --]]
 
 
+-- CONSTS
+
+local debugMode = false;
+
+
 local vdLightHllID        = 207;
 local vdLightHllSwitchBtn = "5";
 
+local doorHallID = 383;
+local doorExtID = 187;
+
+
+-- GET ENVS
+
 local startSource = fibaro:getSourceTrigger();
 
-local intDoorVal, intDoorMT = fibaro:get(372, "value");
-local extDoorVal, extDoorMT = fibaro:get(187, "value");
+local intDoorVal, intDoorMT = fibaro:get(doorHallID, "value");
+local extDoorVal, extDoorMT = fibaro:get(doorExtID, "value");
+
+
+-- PROCESS
+
 
 if (
   (

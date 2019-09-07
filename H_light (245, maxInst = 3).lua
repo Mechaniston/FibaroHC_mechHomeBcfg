@@ -14,15 +14,21 @@ local vdLightKtnSwitchBtn = "5";
 local vdLightHllID        = 207;
 local vdLightHllSwitchBtn = "5";
 
+local lightHall_entID  = 150;
+local lightHall_deepID = 151;
+
+local doorHallID = 383;
+local sensHallID = 236;
+
 local powerID = 6;
 
 
--- GET ENVS
+  -- GET ENVS
 
 local startSource = fibaro:getSourceTrigger();
 
-local inDoorState, inDoorDT = fibaro:get(372, "value");
-local hallSensState, hallSensDT = fibaro:get(236, "value");
+local doorHallIntState, doorHallIntDT = fibaro:get(doorHallID, "value");
+local hallSensState, hallSensDT = fibaro:get(sensHallID, "value");
 local hallLux = fibaro:getValue(296, "value");
 
 local isLightInRoom = false;
@@ -68,16 +74,16 @@ if (
   
   if ( debugMode ) then
     fibaro:debug("We need the light! hallSensDT = " .. hallSensDT
-      .. ", inDoor = " .. inDoorState .. ", inDoorDT = " .. inDoorDT);
+      .. ", doorHallInt = " .. doorHallIntState .. ", doorHallIntDT = " .. doorHallIntDT);
   end
   
-  if ( (tonumber(inDoorState) > 0) and (hallSensDT - inDoorDT < 20) ) then
+  if ( (tonumber(doorHallIntState) > 0) and (hallSensDT - doorHallIntDT < 20) ) then
     
     if ( debugMode ) then fibaro:debug("Somebody coming!"); end
     
     --[[
-    if ( (fibaro:getValue(150, "value") == "0") -- Hlight_ent
-        --or (fibaro:getValue(150, "dead") ~= "0") ) then
+    if ( (fibaro:getValue(lightHall_entID, "value") == "0") -- Hlight_ent
+        --or (fibaro:getValue(lightHall_entID, "dead") ~= "0") ) then
         and fibaro:getValue(359, "value") == "0" -- KlightAux_1
         and fibaro:getValue(360, "value") == "0" -- KlightAux_2
         ) then -- Klight
@@ -98,18 +104,18 @@ if (
       local currentTime = os.date("*t");
       if ( (currentTime.hour >= 22) or (currentTime.hour <= 8) ) then
         fibaro:setGlobal("lightsQueue", fibaro:getGlobalValue("lightsQueue")
-          .. "150,10;");
+          .. tostring(lightHall_entID) .. ",10;");
       else
         fibaro:setGlobal("lightsQueue", fibaro:getGlobalValue("lightsQueue")
-          .. "150,200;");
+          .. tostring(lightHall_entID) .. ",200;");
       end
     else  
       if ( tonumber(hallLux) > 10 ) then
         fibaro:setGlobal("lightsQueue", fibaro:getGlobalValue("lightsQueue")
-          .. "150,150;");
+          .. tostring(lightHall_entID) .. ",150;");
       else
         fibaro:setGlobal("lightsQueue", fibaro:getGlobalValue("lightsQueue")
-          .. "150,200;");
+          .. tostring(lightHall_entID) .. ",200;");
       end
     end
     --]]
@@ -128,22 +134,22 @@ if (
         
         if ( debugMode ) then fibaro:debug("[No twilight or] there is a light in the BR "); end
         
-        if ( (fibaro:getValue(151, "value") == "0")
-          or (fibaro:getValue(151, "dead") >= "1") ) then
+        if ( (fibaro:getValue(lightHall_deepID, "value") == "0")
+          or (fibaro:getValue(lightHall_deepID, "dead") >= "1") ) then
           
           if ( debugMode ) then fibaro:debug("Turn HallLight ON"); end
           
           if ( tonumber(hallLux) > 10 ) then
             fibaro:setGlobal("lightsQueue", fibaro:getGlobalValue("lightsQueue")
-              .. "151,150;");
+              .. tostring(lightHall_deepID) .. ",150;");
           else
             fibaro:setGlobal("lightsQueue", fibaro:getGlobalValue("lightsQueue")
-              .. "151,200;");
+              .. tostring(lightHall_deepID) .. ",200;");
           end
           
           local startTime = os.time();
           while ( os.time() - startTime < 180 ) do
-            if ( tonumber(fibaro:getValue(236, "value")) > 0 ) then -- К:Сенсор
+            if ( tonumber(fibaro:getValue(sensHallID, "value")) > 0 ) then -- К:Сенсор
               startTime = os.time();
             end
             fibaro:sleep(1500);
@@ -151,7 +157,7 @@ if (
           
           if ( debugMode ) then fibaro:debug("Turn HallLight OFF (timeout)"); end
           
-          fibaro:call(151, "turnOff");
+          fibaro:call(lightHall_deepID, "turnOff");
           
         end
         
@@ -160,17 +166,17 @@ if (
         --[[
         if ( tonumber(fibaro:getValue(148, "value")) == 0 ) then -- К_Х:Свет_общ
           if ( tonumber(hallLux) <= 10 ) then
-            fibaro:call(150, "setValue", 10);
+            fibaro:call(lightHall_entID, "setValue", 10);
           end
           
           local startTime = os.time();
           while ( os.time() - startTime < 10 ) do
-            if ( tonumber(fibaro:getValue(236, "value")) > 0 ) then -- К:Сенсор
+            if ( tonumber(fibaro:getValue(sensHallID, "value")) > 0 ) then -- К:Сенсор
               startTime = os.time();
             end
             fibaro:sleep(1500);
           end
-          fibaro:call(150, "turnOff");
+          fibaro:call(lightHall_entID, "turnOff");
         end
         --]]
         
@@ -192,8 +198,8 @@ if (
           
           if ( debugMode ) then fibaro:debug("Check BR exit (hallSensDT" .. hallSensDT .. "; BR_MD_MT = " .. BR_MD_MT .. ").. Ok"); end
           
-          if ( (fibaro:getValue(150, "value") == "0")
-            or (fibaro:getValue(150, "dead") >= "1") ) then
+          if ( (fibaro:getValue(lightHall_entID, "value") == "0")
+            or (fibaro:getValue(lightHall_entID, "dead") >= "1") ) then
             
             if ( debugMode ) then fibaro:debug("Turn min light in Hall"); end
             
@@ -213,8 +219,8 @@ if (
           sleep(2000);
           
           while ( (fibaro:getValue(202, "value") ~= BR_MD)
-            and (fibaro:getValue(150, "value") ~= "0")
-            and (fibaro:getValue(150, "value") ~= "0") ) do
+            and (fibaro:getValue(lightHall_entID, "value") ~= "0")
+            and (fibaro:getValue(lightHall_entID, "value") ~= "0") ) do
             
             fibaro:sleep(1500);
             
@@ -222,7 +228,7 @@ if (
           
           if ( debugMode ) then fibaro:debug("Time to turn off nigt light!"); end
           
-          if ( fibaro:getValue(150, "value") ~= "0" ) then
+          if ( fibaro:getValue(lightHall_entID, "value") ~= "0" ) then
             
             if ( debugMode ) then fibaro:debug("Turn off light in Kitchen"); end
             
